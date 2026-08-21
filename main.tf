@@ -1,10 +1,80 @@
+variable "vpc_id" {
+  type        = string
+  description = "VPC ID"
+  default = "vpc-0ec65c595e103120b"
+}
+
+variable "subnet_ids" {
+  type        = list(string)
+
+  default = [
+    "subnet-03da0a5486c213aae",
+    "subnet-02a5d31f007e28973"
+  ]
+
+  description = "Subnets for ALB and ASG"
+}
+
+variable "security_group_id" {
+  type        = string
+  description = "Security group for EC2 instances"
+  default     = "sg-0c7b92557fa5b1c1d"
+}
+
+variable "ami_id" {
+  type        = string
+  description = "AMI used by the launch template"
+  default = "ami-0bdc7d025135d7b49"
+}
+
+variable "instance_type" {
+  type        = string
+  default     = "t3.micro"
+}
+
+variable "min_size" {
+  type    = number
+  default = 1
+}
+
+variable "max_size" {
+  type    = number
+  default = 2
+}
+
+variable "desired_capacity" {
+  type    = number
+  default = 2
+}
+
+variable "db_name" {
+  type    = string
+  default = "wordpress"
+}
+
+variable "db_user" {
+  type    = string
+  default = "wordpress"
+}
+
+variable "db_password" {
+  type      = string
+  sensitive = true
+}
+
+variable "db_host" {
+  type        = string
+  description = "RDS endpoint"
+}
+
+
 resource "aws_launch_template" "app" {
     
-    vpc_security_group_ids = ["sg-0c7b92557fa5b1c1d"]
+    vpc_security_group_ids = [var.security_group_id]
 
-    image_id = "ami-0bdc7d025135d7b49"
+    image_id = var.ami_id
 
-    instance_type = "t3.micro"
+    instance_type = var.instance_type
 
 
     user_data = base64encode(<<-EOF
@@ -38,13 +108,23 @@ resource "aws_launch_template" "app" {
 resource "aws_lb_target_group" "app" {
     port = 80
     protocol = "HTTP"
-    vpc_id = "vpc-0ec65c595e103120b"
+    vpc_id = var.vpc_id
+
+    health_check {
+        path                = "/"
+        protocol            = "HTTP"
+        matcher             = "200-399"
+        interval            = 30
+        timeout             = 5
+        healthy_threshold   = 2
+        unhealthy_threshold = 3
+    }
 }
 
 resource "aws_lb" "app" {
     internal = false
     load_balancer_type = "application"
-    subnets = ["subnet-03da0a5486c213aae", "subnet-02a5d31f007e28973"]
+    subnets = var.subnet_ids
 }
 
 resource "aws_lb_listener" "app" {
@@ -60,18 +140,18 @@ resource "aws_lb_listener" "app" {
 }
 
 resource "aws_autoscaling_group" "app" {
-    min_size = 1
-    max_size = 2
-    desired_capacity = 2
+    min_size = var.min_size
+    max_size = var.max_size
+    desired_capacity = var.desired_capacity
 
     launch_template {
         id  = aws_launch_template.app.id
-        version = "2"
+        version = "$Latest"
     }
 
     target_group_arns = [aws_lb_target_group.app.arn]
 
-    vpc_zone_identifier = ["subnet-03da0a5486c213aae", "subnet-02a5d31f007e28973"]
+    vpc_zone_identifier = var.subnet_ids
     
   
-}
+}  

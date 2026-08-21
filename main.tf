@@ -1,35 +1,25 @@
 variable "vpc_id" {
   type        = string
   description = "VPC ID"
-  default = "vpc-0ec65c595e103120b"
 }
 
 variable "subnet_ids" {
   type        = list(string)
-
-  default = [
-    "subnet-03da0a5486c213aae",
-    "subnet-02a5d31f007e28973"
-  ]
-
   description = "Subnets for ALB and ASG"
 }
 
 variable "security_group_id" {
   type        = string
   description = "Security group for EC2 instances"
-  default     = "sg-0c7b92557fa5b1c1d"
 }
 
 variable "ami_id" {
   type        = string
   description = "AMI used by the launch template"
-  default = "ami-0bdc7d025135d7b49"
 }
 
 variable "instance_type" {
   type        = string
-  default     = "t3.micro"
 }
 
 variable "min_size" {

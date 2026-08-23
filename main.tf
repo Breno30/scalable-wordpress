@@ -102,11 +102,11 @@ resource "aws_launch_template" "app" {
 
         sudo sed -i 's/^memory_limit = .*/memory_limit = 512M/' /etc/php.ini
 
-        sudo chown -R ec2-user:ec2-user /usr/share/nginx/html
-
         wp --allow-root core download --path=/usr/share/nginx/html
 
-        wp --allow-root config create --path=/usr/share/nginx/html --dbname='wordpress' --dbuser='wordpress' --dbpass='wordpress' --dbhost='wordpress.cdugk0ikk1pg.us-east-1.rds.amazonaws.com' --dbcharset='utf8mb4' --dbcollate='utf8mb4_unicode_ci'
+        wp --allow-root config create --path=/usr/share/nginx/html --dbname='${aws_db_instance.app.db_name}' --dbuser='${aws_db_instance.app.username}' --dbpass='${aws_db_instance.app.password}' --dbhost='${aws_db_instance.app.address}' --dbcharset='utf8mb4' --dbcollate='utf8mb4_unicode_ci'
+
+        sudo chown -R apache:apache /usr/share/nginx/html
 
     EOF
     )

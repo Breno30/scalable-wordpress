@@ -57,6 +57,23 @@ variable "db_host" {
   description = "RDS endpoint"
 }
 
+resource "random_string" "db_name" {
+  length = 16
+  special = false
+}
+
+resource "aws_db_instance" "app" {
+    engine = "mysql"
+    instance_class       = "db.t3.micro"
+    db_name = var.db_name
+    username = var.db_user
+    password = var.db_password # random_string.db_name.result
+    allocated_storage = 20
+    publicly_accessible = true
+    skip_final_snapshot       = true
+    
+
+}
 
 resource "aws_launch_template" "app" {
     

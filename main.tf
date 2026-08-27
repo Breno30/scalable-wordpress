@@ -75,6 +75,31 @@ resource "aws_db_instance" "app" {
 
 }
 
+resource "aws_efs_file_system" "app" {
+    creation_token = "my-product"
+  
+}
+
+resource "aws_security_group" "efs" {
+  
+  name = "app-efs"
+  vpc_id = var.vpc_id
+
+  ingress {
+    from_port = 2049
+    to_port = 2049
+    protocol = "tcp"
+    security_groups = [var.security_group_id]
+  }
+}
+
+resource "aws_efs_mount_target" "app" {
+  for_each = toset(var.subnet_ids)
+  file_system_id = aws_efs_file_system.app.id
+  subnet_id = each.value
+  security_groups = [aws_security_group.efs.id]
+}
+
 resource "aws_launch_template" "app" {
     
     vpc_security_group_ids = [var.security_group_id]
@@ -108,6 +133,20 @@ resource "aws_launch_template" "app" {
         wp --allow-root config create --path=/usr/share/nginx/html --dbname='${aws_db_instance.app.db_name}' --dbuser='${aws_db_instance.app.username}' --dbpass='${aws_db_instance.app.password}' --dbhost='${aws_db_instance.app.address}' --dbcharset='utf8mb4' --dbcollate='utf8mb4_unicode_ci'
 
         sudo chown -R apache:apache /usr/share/nginx/html
+
+        sudo dnf install -y amazon-efs-utils
+
+        sudo mkdir -p /efs
+
+        sudo mount -t efs -o tls ${aws_efs_file_system.app.id}:/ efs
+
+        sudo mkdir -p /efs/uploads
+
+        sudo mkdir -p /usr/share/nginx/html/wp-content/uploads
+
+        sudo chown -R apache:apache /efs/uploads 
+
+        sudo mount --bind /efs/uploads /usr/share/nginx/html/wp-content/uploads
 
     EOF
     )

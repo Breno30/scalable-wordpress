@@ -83,6 +83,7 @@ resource "aws_launch_template" "app" {
 
     instance_type = var.instance_type
 
+    key_name = "wordpress"
 
     user_data = base64encode(<<-EOF
         #!/bin/bash

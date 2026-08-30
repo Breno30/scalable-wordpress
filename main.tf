@@ -173,14 +173,18 @@ resource "aws_elasticache_serverless_cache" "app" {
 }
 
 resource "aws_launch_template" "app" {
-    
-    vpc_security_group_ids = [aws_security_group.app.id]
 
     image_id = var.ami_id
 
     instance_type = var.instance_type
 
     key_name = "wordpress"
+
+    network_interfaces {
+      associate_public_ip_address = true
+      device_index = 0
+      security_groups = [aws_security_group.app.id]
+    }
 
     user_data = base64encode(<<-EOF
         #!/bin/bash

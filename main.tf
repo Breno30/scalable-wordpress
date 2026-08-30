@@ -97,7 +97,7 @@ resource "aws_security_group" "efs" {
 }
 
 resource "aws_efs_mount_target" "app" {
-  for_each = toset(local.subnet_ids)
+  for_each = local.subnet_ids
   file_system_id = aws_efs_file_system.app.id
   subnet_id = each.value
   security_groups = [aws_security_group.efs.id]

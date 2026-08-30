@@ -8,11 +8,6 @@ variable "subnet_ids" {
   description = "Subnets for ALB and ASG"
 }
 
-variable "security_group_id" {
-  type        = string
-  description = "Security group for EC2 instances"
-}
-
 variable "ami_id" {
   type        = string
   description = "AMI used by the launch template"

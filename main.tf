@@ -47,17 +47,12 @@ variable "db_user" {
   default = "wordpress"
 }
 
-variable "db_password" {
-  type      = string
-  sensitive = true
-}
-
 variable "db_host" {
   type        = string
   description = "RDS endpoint"
 }
 
-resource "random_string" "db_name" {
+resource "random_string" "db_password" {
   length = 16
   special = false
 }
@@ -67,7 +62,7 @@ resource "aws_db_instance" "app" {
     instance_class       = "db.t3.micro"
     db_name = var.db_name
     username = var.db_user
-    password = var.db_password # random_string.db_name.result
+    password = random_string.db_password.result
     allocated_storage = 20
     publicly_accessible = true
     skip_final_snapshot       = true

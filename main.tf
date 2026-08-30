@@ -304,7 +304,7 @@ resource "aws_autoscaling_group" "app" {
 
     target_group_arns = [aws_lb_target_group.app.arn]
 
-    vpc_zone_identifier = local.subnet_ids
+    vpc_zone_identifier = values(local.subnet_ids)
     
   
 }  

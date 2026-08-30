@@ -59,7 +59,10 @@ resource "aws_subnet" "app_b" {
 }
 
 locals {
-  subnet_ids = slice(data.aws_subnets.app.ids, 0, 2)
+  subnet_ids = {
+    subnet_a = aws_subnet.app_a.id
+    subnet_b = aws_subnet.app_b.id
+  }
 }
 
 resource "random_string" "db_password" {

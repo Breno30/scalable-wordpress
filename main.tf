@@ -255,7 +255,13 @@ resource "aws_route_table_association" "app_b" {
 resource "aws_lb" "app" {
     internal = false
     load_balancer_type = "application"
-    subnets = local.subnet_ids
+    subnets = values(local.subnet_ids)
+    security_groups = [aws_security_group.app.id]
+
+    depends_on = [ 
+      aws_route_table_association.app_a,
+      aws_route_table_association.app_b
+     ]
 }
 
 resource "aws_lb_listener" "app" {

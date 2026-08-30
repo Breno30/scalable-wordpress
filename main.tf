@@ -169,7 +169,7 @@ resource "aws_elasticache_serverless_cache" "app" {
     aws_security_group.redis.id
   ]
 
-  subnet_ids = local.subnet_ids
+  subnet_ids = values(local.subnet_ids)
 }
 
 resource "aws_launch_template" "app" {

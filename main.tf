@@ -3,11 +3,6 @@ variable "vpc_id" {
   description = "VPC ID"
 }
 
-variable "subnet_ids" {
-  type        = list(string)
-  description = "Subnets for ALB and ASG"
-}
-
 variable "ami_id" {
   type        = string
   description = "AMI used by the launch template"
@@ -40,6 +35,17 @@ variable "db_name" {
 variable "db_user" {
   type    = string
   default = "wordpress"
+}
+
+data "aws_subnets" "app" {
+  filter {
+    name = "vpc-id"
+    values = [var.vpc_id]
+  }
+} 
+
+locals {
+  subnet_ids = slice(data.aws_subnets.app.ids, 0, 2)
 }
 
 resource "random_string" "db_password" {
@@ -79,7 +85,7 @@ resource "aws_security_group" "efs" {
 }
 
 resource "aws_efs_mount_target" "app" {
-  for_each = toset(var.subnet_ids)
+  for_each = toset(local.subnet_ids)
   file_system_id = aws_efs_file_system.app.id
   subnet_id = each.value
   security_groups = [aws_security_group.efs.id]
@@ -151,7 +157,7 @@ resource "aws_elasticache_serverless_cache" "app" {
     aws_security_group.redis.id
   ]
 
-  subnet_ids = var.subnet_ids
+  subnet_ids = local.subnet_ids
 }
 
 resource "aws_launch_template" "app" {
@@ -225,7 +231,7 @@ resource "aws_lb_target_group" "app" {
 resource "aws_lb" "app" {
     internal = false
     load_balancer_type = "application"
-    subnets = var.subnet_ids
+    subnets = local.subnet_ids
 }
 
 resource "aws_lb_listener" "app" {
@@ -252,7 +258,7 @@ resource "aws_autoscaling_group" "app" {
 
     target_group_arns = [aws_lb_target_group.app.arn]
 
-    vpc_zone_identifier = var.subnet_ids
+    vpc_zone_identifier = local.subnet_ids
     
   
 }  

@@ -1,8 +1,3 @@
-variable "vpc_id" {
-  type        = string
-  description = "VPC ID"
-}
-
 variable "ami_id" {
   type        = string
   description = "AMI used by the launch template"

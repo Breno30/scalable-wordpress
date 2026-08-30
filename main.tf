@@ -228,6 +228,30 @@ resource "aws_lb_target_group" "app" {
     }
 }
 
+resource "aws_internet_gateway" "app" {
+  vpc_id = aws_vpc.app.id
+}
+
+resource "aws_route_table" "public" {
+  vpc_id = aws_vpc.app.id
+
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.app.id
+  }
+  
+}
+
+resource "aws_route_table_association" "app_a" {
+  subnet_id = aws_subnet.app_a.id
+  route_table_id = aws_route_table.public.id
+}
+
+resource "aws_route_table_association" "app_b" {
+  subnet_id = aws_subnet.app_b.id
+  route_table_id = aws_route_table.public.id
+}
+
 resource "aws_lb" "app" {
     internal = false
     load_balancer_type = "application"

@@ -5,7 +5,7 @@ variable "ami_id" {
 }
 
 variable "instance_type" {
-  type        = string
+  type = string
 }
 
 variable "min_size" {
@@ -35,24 +35,24 @@ variable "db_user" {
 
 # Core networking
 resource "aws_vpc" "app" {
-  cidr_block = "10.0.0.0/16"
-  enable_dns_support = true 
-  enable_dns_hostnames = true 
+  cidr_block           = "10.0.0.0/16"
+  enable_dns_support   = true
+  enable_dns_hostnames = true
 }
 
 
 resource "aws_subnet" "app_a" {
-  vpc_id = aws_vpc.app.id
-  cidr_block = "10.0.1.0/24"
+  vpc_id            = aws_vpc.app.id
+  cidr_block        = "10.0.1.0/24"
   availability_zone = "us-east-1a"
-  
+
 }
 
 resource "aws_subnet" "app_b" {
-  vpc_id = aws_vpc.app.id
-  cidr_block = "10.0.2.0/24"
+  vpc_id            = aws_vpc.app.id
+  cidr_block        = "10.0.2.0/24"
   availability_zone = "us-east-1b"
-  
+
 }
 
 locals {
@@ -74,48 +74,48 @@ resource "aws_route_table" "public" {
     cidr_block = "0.0.0.0/0"
     gateway_id = aws_internet_gateway.app.id
   }
-  
+
 }
 
 resource "aws_route_table_association" "app_a" {
-  subnet_id = aws_subnet.app_a.id
+  subnet_id      = aws_subnet.app_a.id
   route_table_id = aws_route_table.public.id
 }
 
 resource "aws_route_table_association" "app_b" {
-  subnet_id = aws_subnet.app_b.id
+  subnet_id      = aws_subnet.app_b.id
   route_table_id = aws_route_table.public.id
 }
 
 # Database
 resource "random_string" "db_password" {
-  length = 16
+  length  = 16
   special = false
 }
 
 resource "aws_db_instance" "app" {
-    engine = "mysql"
-    instance_class       = "db.t3.micro"
-    db_name = var.db_name
-    username = var.db_user
-    password = random_string.db_password.result
-    allocated_storage = 20
-    publicly_accessible = true
-    skip_final_snapshot       = true
-    
+  engine              = "mysql"
+  instance_class      = "db.t3.micro"
+  db_name             = var.db_name
+  username            = var.db_user
+  password            = random_string.db_password.result
+  allocated_storage   = 20
+  publicly_accessible = true
+  skip_final_snapshot = true
+
 
 }
 
 # Security groups
 resource "aws_security_group" "efs" {
-  
-  name = "app-efs"
+
+  name   = "app-efs"
   vpc_id = aws_vpc.app.id
 
   ingress {
-    from_port = 2049
-    to_port = 2049
-    protocol = "tcp"
+    from_port       = 2049
+    to_port         = 2049
+    protocol        = "tcp"
     security_groups = [aws_security_group.app.id]
   }
 }
@@ -125,37 +125,37 @@ resource "aws_security_group" "app" {
   vpc_id = aws_vpc.app.id
 
   ingress {
-    from_port = 22
-    to_port = 22
-    protocol = "tcp"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
 
   ingress {
-    from_port = 80
-    to_port = 80
-    protocol = "tcp"
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
 
   ingress {
-    from_port = 443
-    to_port = 443
-    protocol = "tcp"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
 
   ingress {
-    from_port = 6379
-    to_port = 6379
-    protocol = "tcp"
+    from_port   = 6379
+    to_port     = 6379
+    protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
-  
+
   egress {
-    from_port = 0
-    to_port = 0
-    protocol = "-1"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
 }
@@ -165,23 +165,23 @@ resource "aws_security_group" "redis" {
   vpc_id = aws_vpc.app.id
 
   ingress {
-    from_port = 6379
-    to_port = 6379
-    protocol = "tcp"
+    from_port       = 6379
+    to_port         = 6379
+    protocol        = "tcp"
     security_groups = [aws_security_group.app.id]
   }
 
   egress {
-    from_port = 0
-    to_port = 0
-    protocol = "-1"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
 }
 
 resource "aws_elasticache_serverless_cache" "app" {
-    engine = "valkey"
-  name = "wordpress-sessions"
+  engine = "valkey"
+  name   = "wordpress-sessions"
 
   security_group_ids = [
     aws_security_group.redis.id
@@ -192,34 +192,34 @@ resource "aws_elasticache_serverless_cache" "app" {
 
 # Shared file storage
 resource "aws_efs_file_system" "app" {
-    creation_token = "my-product"
-  
+  creation_token = "my-product"
+
 }
 
 # EFS mount targets
 resource "aws_efs_mount_target" "app" {
-  for_each = local.subnet_ids
-  file_system_id = aws_efs_file_system.app.id
-  subnet_id = each.value
+  for_each        = local.subnet_ids
+  file_system_id  = aws_efs_file_system.app.id
+  subnet_id       = each.value
   security_groups = [aws_security_group.efs.id]
 }
 
 # Application compute
 resource "aws_launch_template" "app" {
 
-    image_id = var.ami_id
+  image_id = var.ami_id
 
-    instance_type = var.instance_type
+  instance_type = var.instance_type
 
-    key_name = "wordpress"
+  key_name = "wordpress"
 
-    network_interfaces {
-      associate_public_ip_address = true
-      device_index = 0
-      security_groups = [aws_security_group.app.id]
-    }
+  network_interfaces {
+    associate_public_ip_address = true
+    device_index                = 0
+    security_groups             = [aws_security_group.app.id]
+  }
 
-    user_data = base64encode(<<-EOF
+  user_data = base64encode(<<-EOF
         #!/bin/bash
 
         sudo dnf update -y
@@ -258,71 +258,71 @@ resource "aws_launch_template" "app" {
         sudo mount --bind /efs/uploads /usr/share/nginx/html/wp-content/uploads
 
     EOF
-    )
+  )
 }
 
 # Load balancer target configuration
 resource "aws_lb_target_group" "app" {
-    port = 80
-    protocol = "HTTP"
-    vpc_id = aws_vpc.app.id
+  port     = 80
+  protocol = "HTTP"
+  vpc_id   = aws_vpc.app.id
 
-    health_check {
-        path                = "/"
-        protocol            = "HTTP"
-        matcher             = "200-399"
-        interval            = 30
-        timeout             = 5
-        healthy_threshold   = 2
-        unhealthy_threshold = 3
-    }
+  health_check {
+    path                = "/"
+    protocol            = "HTTP"
+    matcher             = "200-399"
+    interval            = 30
+    timeout             = 5
+    healthy_threshold   = 2
+    unhealthy_threshold = 3
+  }
 }
 
 # Application load balancer
 resource "aws_lb" "app" {
-    internal = false
-    load_balancer_type = "application"
-    subnets = values(local.subnet_ids)
-    security_groups = [aws_security_group.app.id]
+  internal           = false
+  load_balancer_type = "application"
+  subnets            = values(local.subnet_ids)
+  security_groups    = [aws_security_group.app.id]
 
-    depends_on = [ 
-      aws_route_table_association.app_a,
-      aws_route_table_association.app_b
-     ]
+  depends_on = [
+    aws_route_table_association.app_a,
+    aws_route_table_association.app_b
+  ]
 }
 
 resource "aws_lb_listener" "app" {
-    load_balancer_arn =  aws_lb.app.arn
-    port = 80
-    protocol = "HTTP"
+  load_balancer_arn = aws_lb.app.arn
+  port              = 80
+  protocol          = "HTTP"
 
-    default_action {
-      type = "forward"
-      target_group_arn = aws_lb_target_group.app.arn
-    }
-  
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.app.arn
+  }
+
 }
 
 # Auto Scaling
 resource "aws_autoscaling_group" "app" {
-    min_size = var.min_size
-    max_size = var.max_size
-    desired_capacity = var.desired_capacity
+  min_size         = var.min_size
+  max_size         = var.max_size
+  desired_capacity = var.desired_capacity
 
-    launch_template {
-        id  = aws_launch_template.app.id
-        version = "$Latest"
-    }
+  launch_template {
+    id      = aws_launch_template.app.id
+    version = "$Latest"
+  }
 
-    target_group_arns = [aws_lb_target_group.app.arn]
+  target_group_arns = [aws_lb_target_group.app.arn]
 
-    vpc_zone_identifier = values(local.subnet_ids)
-    
-  
-}  
+  vpc_zone_identifier = values(local.subnet_ids)
+
+
+}
 
 # Outputs
 output "url" {
-  value = aws_lb.app.dns_name
+  value       = aws_lb.app.dns_name
   description = "final load balancer url"
 }

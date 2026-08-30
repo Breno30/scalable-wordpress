@@ -34,7 +34,7 @@ variable "max_size" {
 
 variable "desired_capacity" {
   type    = number
-  default = 2
+  default = 1
 }
 
 variable "db_name" {
@@ -89,7 +89,7 @@ resource "aws_security_group" "efs" {
     from_port = 2049
     to_port = 2049
     protocol = "tcp"
-    security_groups = [var.security_group_id]
+    security_groups = [aws_security_group.app.id]
   }
 }
 
@@ -100,9 +100,78 @@ resource "aws_efs_mount_target" "app" {
   security_groups = [aws_security_group.efs.id]
 }
 
+resource "aws_security_group" "app" {
+  vpc_id = var.vpc_id
+
+  ingress {
+    from_port = 22
+    to_port = 22
+    protocol = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port = 80
+    to_port = 80
+    protocol = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port = 443
+    to_port = 443
+    protocol = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port = 6379
+    to_port = 6379
+    protocol = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  
+  egress {
+    from_port = 0
+    to_port = 0
+    protocol = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+
+resource "aws_security_group" "redis" {
+  vpc_id = var.vpc_id
+
+  ingress {
+    from_port = 6379
+    to_port = 6379
+    protocol = "tcp"
+    security_groups = [aws_security_group.app.id]
+  }
+
+  egress {
+    from_port = 0
+    to_port = 0
+    protocol = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+resource "aws_elasticache_serverless_cache" "app" {
+    engine = "valkey"
+  name = "wordpress-sessions"
+
+  security_group_ids = [
+    aws_security_group.redis.id
+  ]
+
+  subnet_ids = var.subnet_ids
+}
+
 resource "aws_launch_template" "app" {
     
-    vpc_security_group_ids = [var.security_group_id]
+    vpc_security_group_ids = [aws_security_group.app.id]
 
     image_id = var.ami_id
 

@@ -1,6 +1,5 @@
 vpc_id = "vpc-0ec65c595e103120b"
 db_host = null
-db_password = null
 subnet_ids = [
     "subnet-03da0a5486c213aae",
     "subnet-02a5d31f007e28973"

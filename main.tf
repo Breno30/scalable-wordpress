@@ -74,7 +74,7 @@ resource "aws_efs_file_system" "app" {
 resource "aws_security_group" "efs" {
   
   name = "app-efs"
-  vpc_id = var.vpc_id
+  vpc_id = aws_vpc.app.id
 
   ingress {
     from_port = 2049
@@ -92,7 +92,7 @@ resource "aws_efs_mount_target" "app" {
 }
 
 resource "aws_security_group" "app" {
-  vpc_id = var.vpc_id
+  vpc_id = aws_vpc.app.id
 
   ingress {
     from_port = 22
@@ -132,7 +132,7 @@ resource "aws_security_group" "app" {
 
 
 resource "aws_security_group" "redis" {
-  vpc_id = var.vpc_id
+  vpc_id = aws_vpc.app.id
 
   ingress {
     from_port = 6379
@@ -215,7 +215,7 @@ resource "aws_launch_template" "app" {
 resource "aws_lb_target_group" "app" {
     port = 80
     protocol = "HTTP"
-    vpc_id = var.vpc_id
+    vpc_id = aws_vpc.app.id
 
     health_check {
         path                = "/"

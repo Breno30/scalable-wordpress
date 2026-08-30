@@ -42,11 +42,6 @@ variable "db_user" {
   default = "wordpress"
 }
 
-variable "db_host" {
-  type        = string
-  description = "RDS endpoint"
-}
-
 resource "random_string" "db_password" {
   length = 16
   special = false

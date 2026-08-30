@@ -191,7 +191,7 @@ resource "aws_launch_template" "app" {
 
         sudo dnf update -y
 
-        sudo dnf install -y   nginx   php   php-fpm   php-mysqlnd   php-curl   php-gd   php-mbstring   php-xml   php-zip   php-intl   php-cli   nfs-utils   wget   unzip mariadb105
+        sudo dnf install -y   nginx   php   php-fpm   php-mysqlnd   php-curl   php-gd   php-mbstring   php-xml   php-zip   php-intl   php-cli   nfs-utils   wget   unzip mariadb105 php-pecl-redis
 
         sudo systemctl enable --now nginx
         sudo systemctl enable --now php-fpm

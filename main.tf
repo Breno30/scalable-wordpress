@@ -1,3 +1,4 @@
+# Input variables
 variable "ami_id" {
   type        = string
   description = "AMI used by the launch template"
@@ -32,6 +33,7 @@ variable "db_user" {
   default = "wordpress"
 }
 
+# Core networking
 resource "aws_vpc" "app" {
   cidr_block = "10.0.0.0/16"
   enable_dns_support = true 
@@ -60,6 +62,7 @@ locals {
   }
 }
 
+# Database
 resource "random_string" "db_password" {
   length = 16
   special = false
@@ -78,11 +81,13 @@ resource "aws_db_instance" "app" {
 
 }
 
+# Shared file storage
 resource "aws_efs_file_system" "app" {
     creation_token = "my-product"
   
 }
 
+# Security groups
 resource "aws_security_group" "efs" {
   
   name = "app-efs"
@@ -96,6 +101,7 @@ resource "aws_security_group" "efs" {
   }
 }
 
+# EFS mount targets
 resource "aws_efs_mount_target" "app" {
   for_each = local.subnet_ids
   file_system_id = aws_efs_file_system.app.id
@@ -103,6 +109,7 @@ resource "aws_efs_mount_target" "app" {
   security_groups = [aws_security_group.efs.id]
 }
 
+# Application security
 resource "aws_security_group" "app" {
   vpc_id = aws_vpc.app.id
 
@@ -142,7 +149,7 @@ resource "aws_security_group" "app" {
   }
 }
 
-
+# Cache security and service
 resource "aws_security_group" "redis" {
   vpc_id = aws_vpc.app.id
 
@@ -172,6 +179,7 @@ resource "aws_elasticache_serverless_cache" "app" {
   subnet_ids = values(local.subnet_ids)
 }
 
+# Application compute
 resource "aws_launch_template" "app" {
 
     image_id = var.ami_id
@@ -228,6 +236,7 @@ resource "aws_launch_template" "app" {
     )
 }
 
+# Load balancer target configuration
 resource "aws_lb_target_group" "app" {
     port = 80
     protocol = "HTTP"
@@ -244,6 +253,7 @@ resource "aws_lb_target_group" "app" {
     }
 }
 
+# Public network routing
 resource "aws_internet_gateway" "app" {
   vpc_id = aws_vpc.app.id
 }
@@ -268,6 +278,7 @@ resource "aws_route_table_association" "app_b" {
   route_table_id = aws_route_table.public.id
 }
 
+# Application load balancer
 resource "aws_lb" "app" {
     internal = false
     load_balancer_type = "application"
@@ -292,6 +303,7 @@ resource "aws_lb_listener" "app" {
   
 }
 
+# Auto Scaling
 resource "aws_autoscaling_group" "app" {
     min_size = var.min_size
     max_size = var.max_size
@@ -309,6 +321,7 @@ resource "aws_autoscaling_group" "app" {
   
 }  
 
+# Outputs
 output "url" {
   value = aws_lb.app.dns_name
   description = "final load balancer url"

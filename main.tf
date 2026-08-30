@@ -308,3 +308,8 @@ resource "aws_autoscaling_group" "app" {
     
   
 }  
+
+output "url" {
+  value = aws_lb.app.dns_name
+  description = "final load balancer url"
+}

@@ -62,6 +62,31 @@ locals {
   }
 }
 
+# Public network routing
+resource "aws_internet_gateway" "app" {
+  vpc_id = aws_vpc.app.id
+}
+
+resource "aws_route_table" "public" {
+  vpc_id = aws_vpc.app.id
+
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.app.id
+  }
+  
+}
+
+resource "aws_route_table_association" "app_a" {
+  subnet_id = aws_subnet.app_a.id
+  route_table_id = aws_route_table.public.id
+}
+
+resource "aws_route_table_association" "app_b" {
+  subnet_id = aws_subnet.app_b.id
+  route_table_id = aws_route_table.public.id
+}
+
 # Database
 resource "random_string" "db_password" {
   length = 16
@@ -81,12 +106,6 @@ resource "aws_db_instance" "app" {
 
 }
 
-# Shared file storage
-resource "aws_efs_file_system" "app" {
-    creation_token = "my-product"
-  
-}
-
 # Security groups
 resource "aws_security_group" "efs" {
   
@@ -99,14 +118,6 @@ resource "aws_security_group" "efs" {
     protocol = "tcp"
     security_groups = [aws_security_group.app.id]
   }
-}
-
-# EFS mount targets
-resource "aws_efs_mount_target" "app" {
-  for_each = local.subnet_ids
-  file_system_id = aws_efs_file_system.app.id
-  subnet_id = each.value
-  security_groups = [aws_security_group.efs.id]
 }
 
 # Application security
@@ -177,6 +188,20 @@ resource "aws_elasticache_serverless_cache" "app" {
   ]
 
   subnet_ids = values(local.subnet_ids)
+}
+
+# Shared file storage
+resource "aws_efs_file_system" "app" {
+    creation_token = "my-product"
+  
+}
+
+# EFS mount targets
+resource "aws_efs_mount_target" "app" {
+  for_each = local.subnet_ids
+  file_system_id = aws_efs_file_system.app.id
+  subnet_id = each.value
+  security_groups = [aws_security_group.efs.id]
 }
 
 # Application compute
@@ -251,31 +276,6 @@ resource "aws_lb_target_group" "app" {
         healthy_threshold   = 2
         unhealthy_threshold = 3
     }
-}
-
-# Public network routing
-resource "aws_internet_gateway" "app" {
-  vpc_id = aws_vpc.app.id
-}
-
-resource "aws_route_table" "public" {
-  vpc_id = aws_vpc.app.id
-
-  route {
-    cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.app.id
-  }
-  
-}
-
-resource "aws_route_table_association" "app_a" {
-  subnet_id = aws_subnet.app_a.id
-  route_table_id = aws_route_table.public.id
-}
-
-resource "aws_route_table_association" "app_b" {
-  subnet_id = aws_subnet.app_b.id
-  route_table_id = aws_route_table.public.id
 }
 
 # Application load balancer

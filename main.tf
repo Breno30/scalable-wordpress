@@ -37,12 +37,26 @@ variable "db_user" {
   default = "wordpress"
 }
 
-data "aws_subnets" "app" {
-  filter {
-    name = "vpc-id"
-    values = [var.vpc_id]
-  }
-} 
+resource "aws_vpc" "app" {
+  cidr_block = "10.0.0.0/16"
+  enable_dns_support = true 
+  enable_dns_hostnames = true 
+}
+
+
+resource "aws_subnet" "app_a" {
+  vpc_id = aws_vpc.app.id
+  cidr_block = "10.0.1.0/24"
+  availability_zone = "us-east-1a"
+  
+}
+
+resource "aws_subnet" "app_b" {
+  vpc_id = aws_vpc.app.id
+  cidr_block = "10.0.2.0/24"
+  availability_zone = "us-east-1b"
+  
+}
 
 locals {
   subnet_ids = slice(data.aws_subnets.app.ids, 0, 2)

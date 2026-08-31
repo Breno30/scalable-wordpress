@@ -157,36 +157,40 @@ resource "aws_security_group" "efs" {
   }
 }
 
-# Application security
-resource "aws_security_group" "app" {
-  vpc_id = aws_vpc.app.id
+# Load balancer security
+resource "aws_security_group" "alb" {
+  name        = "wordpress-alb"
+  description = "Allow public HTTP traffic to the application load balancer"
+  vpc_id      = aws_vpc.app.id
 
   ingress {
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
+    description = "HTTP from the internet"
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  ingress {
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
+}
+
+# Application security
+resource "aws_security_group" "app" {
+  name        = "wordpress-app"
+  description = "Allow HTTP traffic only from the application load balancer"
+  vpc_id      = aws_vpc.app.id
 
   ingress {
-    from_port   = 6379
-    to_port     = 6379
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    description     = "HTTP from the application load balancer"
+    from_port       = 80
+    to_port         = 80
+    protocol        = "tcp"
+    security_groups = [aws_security_group.alb.id]
   }
 
   egress {
@@ -320,7 +324,7 @@ resource "aws_lb" "app" {
   internal           = false
   load_balancer_type = "application"
   subnets            = values(local.subnet_ids)
-  security_groups    = [aws_security_group.app.id]
+  security_groups    = [aws_security_group.alb.id]
 
   depends_on = [
     aws_route_table_association.app_a,

@@ -350,6 +350,11 @@ resource "aws_autoscaling_group" "app" {
   max_size         = var.max_size
   desired_capacity = var.desired_capacity
 
+  health_check_type         = "ELB"
+  health_check_grace_period = 300
+
+  default_instance_warmup = 300
+
   launch_template {
     id      = aws_launch_template.app.id
     version = "$Latest"
@@ -360,6 +365,20 @@ resource "aws_autoscaling_group" "app" {
   vpc_zone_identifier = values(local.subnet_ids)
 
 
+}
+
+resource "aws_autoscaling_policy" "app_cpu_target" {
+  name                   = "wordpress-average-cpu"
+  autoscaling_group_name = aws_autoscaling_group.app.name
+  policy_type            = "TargetTrackingScaling"
+
+  target_tracking_configuration {
+    predefined_metric_specification {
+      predefined_metric_type = "ASGAverageCPUUtilization"
+    }
+
+    target_value = 60
+  }
 }
 
 # Outputs

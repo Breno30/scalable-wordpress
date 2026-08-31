@@ -55,6 +55,19 @@ resource "aws_subnet" "app_b" {
 
 }
 
+# Private database subnets have no route to the internet gateway.
+resource "aws_subnet" "db_a" {
+  vpc_id            = aws_vpc.app.id
+  cidr_block        = "10.0.11.0/24"
+  availability_zone = "us-east-1a"
+}
+
+resource "aws_subnet" "db_b" {
+  vpc_id            = aws_vpc.app.id
+  cidr_block        = "10.0.12.0/24"
+  availability_zone = "us-east-1b"
+}
+
 locals {
   subnet_ids = {
     subnet_a = aws_subnet.app_a.id
@@ -93,15 +106,39 @@ resource "random_string" "db_password" {
   special = false
 }
 
+resource "aws_db_subnet_group" "app" {
+  name = "wordpress-db"
+  subnet_ids = [
+    aws_subnet.db_a.id,
+    aws_subnet.db_b.id
+  ]
+}
+
+resource "aws_security_group" "db" {
+  name        = "wordpress-db"
+  description = "Allow MySQL access from WordPress instances"
+  vpc_id      = aws_vpc.app.id
+
+  ingress {
+    description     = "MySQL from application instances"
+    from_port       = 3306
+    to_port         = 3306
+    protocol        = "tcp"
+    security_groups = [aws_security_group.app.id]
+  }
+}
+
 resource "aws_db_instance" "app" {
-  engine              = "mysql"
-  instance_class      = "db.t3.micro"
-  db_name             = var.db_name
-  username            = var.db_user
-  password            = random_string.db_password.result
-  allocated_storage   = 20
-  publicly_accessible = true
-  skip_final_snapshot = true
+  engine                 = "mysql"
+  instance_class         = "db.t3.micro"
+  db_name                = var.db_name
+  username               = var.db_user
+  password               = random_string.db_password.result
+  allocated_storage      = 20
+  db_subnet_group_name   = aws_db_subnet_group.app.name
+  vpc_security_group_ids = [aws_security_group.db.id]
+  publicly_accessible    = false
+  skip_final_snapshot    = true
 
 
 }

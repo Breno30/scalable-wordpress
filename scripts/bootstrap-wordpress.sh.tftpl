@@ -1,0 +1,92 @@
+#!/bin/bash
+
+readonly WORDPRESS_DIR="${wordpress_dir}"
+
+dnf update -y
+dnf install -y \
+  amazon-efs-utils \
+  curl \
+  mariadb105 \
+  nginx \
+  nfs-utils \
+  php \
+  php-cli \
+  php-curl \
+  php-fpm \
+  php-gd \
+  php-intl \
+  php-mbstring \
+  php-mysqlnd \
+  php-pecl-redis \
+  php-xml \
+  php-zip \
+  unzip
+
+# Run PHP-FPM as the same user that owns the WordPress files. Using an explicit
+# user avoids the previous nginx/apache ownership mismatch.
+sed -i \
+  -e 's/^[;[:space:]]*user[[:space:]]*=.*/user = nginx/' \
+  -e 's/^[;[:space:]]*group[[:space:]]*=.*/group = nginx/' \
+  -e 's|^[;[:space:]]*listen[[:space:]]*=.*|listen = /run/php-fpm/www.sock|' \
+  -e 's/^[;[:space:]]*listen.owner[[:space:]]*=.*/listen.owner = nginx/' \
+  -e 's/^[;[:space:]]*listen.group[[:space:]]*=.*/listen.group = nginx/' \
+  -e 's/^[;[:space:]]*listen.acl_users[[:space:]]*=.*/listen.acl_users = nginx/' \
+  /etc/php-fpm.d/www.conf
+sed -i 's/^memory_limit = .*/memory_limit = 512M/' /etc/php.ini
+
+# Replace the package default with a server block that explicitly sends PHP
+# scripts to PHP-FPM. try_files also enables normal WordPress permalink routing.
+rm -f /etc/nginx/conf.d/default.conf
+cat >/etc/nginx/conf.d/wordpress.conf <<'NGINX'
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+    server_name _;
+
+    root /usr/share/nginx/html;
+    index index.php index.html;
+
+    location / {
+        try_files $uri $uri/ /index.php?$args;
+    }
+
+    location ~ \.php$ {
+        try_files $uri =404;
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        fastcgi_pass unix:/run/php-fpm/www.sock;
+    }
+
+    location ~ /\. {
+        deny all;
+    }
+}
+NGINX
+
+rm -rf "$WORDPRESS_DIR"/*
+curl --fail --location --retry 5 \
+  https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar \
+  --output /usr/local/bin/wp
+chmod 0755 /usr/local/bin/wp
+
+wp --allow-root core download --path="$WORDPRESS_DIR"
+wp --allow-root config create \
+  --path="$WORDPRESS_DIR" \
+  --dbname='${db_name}' \
+  --dbuser='${db_user}' \
+  --dbpass='${db_password}' \
+  --dbhost='${db_host}' \
+  --dbcharset='utf8mb4' \
+  --dbcollate='utf8mb4_unicode_ci' \
+  --skip-salts
+
+mkdir -p /efs "$WORDPRESS_DIR/wp-content/uploads"
+mount -t efs -o tls '${efs_file_id}:/' /efs
+mkdir -p /efs/uploads
+mount --bind /efs/uploads "$WORDPRESS_DIR/wp-content/uploads"
+chown -R nginx:nginx "$WORDPRESS_DIR" /efs/uploads
+
+# Validate configuration before exposing the instance to the load balancer.
+php-fpm --test
+nginx -t
+systemctl enable --now php-fpm nginx

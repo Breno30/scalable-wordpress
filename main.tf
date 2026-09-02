@@ -314,46 +314,14 @@ resource "aws_launch_template" "app" {
     security_groups             = [aws_security_group.app.id]
   }
 
-  user_data = base64encode(<<-EOF
-        #!/bin/bash
-
-        sudo dnf update -y
-
-        sudo dnf install -y   nginx   php   php-fpm   php-mysqlnd   php-curl   php-gd   php-mbstring   php-xml   php-zip   php-intl   php-cli   nfs-utils   wget   unzip mariadb105 php-pecl-redis
-
-        sudo systemctl enable --now nginx
-        sudo systemctl enable --now php-fpm
-
-        sudo rm -r /usr/share/nginx/html/*
-
-        sudo curl -L https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar -o /tmp/wp
-        sudo chmod +x /tmp/wp
-        sudo mv /tmp/wp /usr/local/bin/wp
-
-        sudo sed -i 's/^memory_limit = .*/memory_limit = 512M/' /etc/php.ini
-
-        wp --allow-root core download --path=/usr/share/nginx/html
-
-        wp --allow-root config create --path=/usr/share/nginx/html --dbname='${aws_db_instance.app.db_name}' --dbuser='${aws_db_instance.app.username}' --dbpass='${aws_db_instance.app.password}' --dbhost='${aws_db_instance.app.address}' --dbcharset='utf8mb4' --dbcollate='utf8mb4_unicode_ci' --skip-salts
-
-        sudo chown -R apache:apache /usr/share/nginx/html
-
-        sudo dnf install -y amazon-efs-utils
-
-        sudo mkdir -p /efs
-
-        sudo mount -t efs -o tls ${aws_efs_file_system.app.id}:/ efs
-
-        sudo mkdir -p /efs/uploads
-
-        sudo mkdir -p /usr/share/nginx/html/wp-content/uploads
-
-        sudo chown -R apache:apache /efs/uploads 
-
-        sudo mount --bind /efs/uploads /usr/share/nginx/html/wp-content/uploads
-
-    EOF
-  )
+  user_data = base64encode(templatefile("${path.module}/scripts/bootstrap-wordpress.sh.tftpl", {
+    db_host       = aws_db_instance.app.address
+    db_name       = aws_db_instance.app.db_name
+    db_password   = aws_db_instance.app.password
+    db_user       = aws_db_instance.app.username
+    efs_file_id   = aws_efs_file_system.app.id
+    wordpress_dir = "/usr/share/nginx/html"
+  }))
 }
 
 # Load balancer target configuration
@@ -418,6 +386,7 @@ resource "aws_autoscaling_group" "app" {
 
   vpc_zone_identifier = values(local.private_app_subnet_ids)
 
+  depends_on = [aws_efs_mount_target.app]
 
 }
 

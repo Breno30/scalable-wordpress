@@ -3,9 +3,10 @@
 readonly WORDPRESS_DIR="${wordpress_dir}"
 
 dnf update -y
+# Amazon Linux 2023 already supplies the curl command through curl-minimal.
+# Installing the full curl package here would conflict with that default.
 dnf install -y \
   amazon-efs-utils \
-  curl \
   mariadb105 \
   nginx \
   nfs-utils \

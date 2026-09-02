@@ -41,6 +41,7 @@ resource "aws_vpc" "app" {
 }
 
 
+# Public subnets contain only internet-facing resources such as the ALB and NAT.
 resource "aws_subnet" "app_a" {
   vpc_id            = aws_vpc.app.id
   cidr_block        = "10.0.1.0/24"
@@ -53,6 +54,21 @@ resource "aws_subnet" "app_b" {
   cidr_block        = "10.0.2.0/24"
   availability_zone = "us-east-1b"
 
+}
+
+# Private application subnets contain EC2, EFS mount targets, and Valkey.
+# They can start outbound connections through NAT, but cannot receive connections
+# directly from the internet.
+resource "aws_subnet" "private_app_a" {
+  vpc_id            = aws_vpc.app.id
+  cidr_block        = "10.0.21.0/24"
+  availability_zone = "us-east-1a"
+}
+
+resource "aws_subnet" "private_app_b" {
+  vpc_id            = aws_vpc.app.id
+  cidr_block        = "10.0.22.0/24"
+  availability_zone = "us-east-1b"
 }
 
 # Private database subnets have no route to the internet gateway.
@@ -69,9 +85,14 @@ resource "aws_subnet" "db_b" {
 }
 
 locals {
-  subnet_ids = {
+  public_subnet_ids = {
     subnet_a = aws_subnet.app_a.id
     subnet_b = aws_subnet.app_b.id
+  }
+
+  private_app_subnet_ids = {
+    subnet_a = aws_subnet.private_app_a.id
+    subnet_b = aws_subnet.private_app_b.id
   }
 }
 
@@ -98,6 +119,39 @@ resource "aws_route_table_association" "app_a" {
 resource "aws_route_table_association" "app_b" {
   subnet_id      = aws_subnet.app_b.id
   route_table_id = aws_route_table.public.id
+}
+
+# One NAT gateway per Availability Zone keeps private application instances able
+# to download updates without assigning them public IP addresses.
+resource "aws_eip" "nat" {
+  for_each = local.public_subnet_ids
+  domain   = "vpc"
+
+  depends_on = [aws_internet_gateway.app]
+}
+
+resource "aws_nat_gateway" "app" {
+  for_each      = local.public_subnet_ids
+  allocation_id = aws_eip.nat[each.key].id
+  subnet_id     = each.value
+
+  depends_on = [aws_internet_gateway.app]
+}
+
+resource "aws_route_table" "private_app" {
+  for_each = local.private_app_subnet_ids
+  vpc_id   = aws_vpc.app.id
+
+  route {
+    cidr_block     = "0.0.0.0/0"
+    nat_gateway_id = aws_nat_gateway.app[each.key].id
+  }
+}
+
+resource "aws_route_table_association" "private_app" {
+  for_each       = local.private_app_subnet_ids
+  subnet_id      = each.value
+  route_table_id = aws_route_table.private_app[each.key].id
 }
 
 # Database
@@ -228,7 +282,7 @@ resource "aws_elasticache_serverless_cache" "app" {
     aws_security_group.redis.id
   ]
 
-  subnet_ids = values(local.subnet_ids)
+  subnet_ids = values(local.private_app_subnet_ids)
 }
 
 # Shared file storage
@@ -239,7 +293,7 @@ resource "aws_efs_file_system" "app" {
 
 # EFS mount targets
 resource "aws_efs_mount_target" "app" {
-  for_each        = local.subnet_ids
+  for_each        = local.private_app_subnet_ids
   file_system_id  = aws_efs_file_system.app.id
   subnet_id       = each.value
   security_groups = [aws_security_group.efs.id]
@@ -255,7 +309,7 @@ resource "aws_launch_template" "app" {
   key_name = "wordpress"
 
   network_interfaces {
-    associate_public_ip_address = true
+    associate_public_ip_address = false
     device_index                = 0
     security_groups             = [aws_security_group.app.id]
   }
@@ -323,7 +377,7 @@ resource "aws_lb_target_group" "app" {
 resource "aws_lb" "app" {
   internal           = false
   load_balancer_type = "application"
-  subnets            = values(local.subnet_ids)
+  subnets            = values(local.public_subnet_ids)
   security_groups    = [aws_security_group.alb.id]
 
   depends_on = [
@@ -362,7 +416,7 @@ resource "aws_autoscaling_group" "app" {
 
   target_group_arns = [aws_lb_target_group.app.arn]
 
-  vpc_zone_identifier = values(local.subnet_ids)
+  vpc_zone_identifier = values(local.private_app_subnet_ids)
 
 
 }

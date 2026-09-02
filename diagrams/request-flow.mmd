@@ -1,0 +1,25 @@
+sequenceDiagram
+    autonumber
+    actor User as Browser
+    participant ALB as Application Load Balancer
+    participant WP as WordPress on EC2
+    participant Cache as Valkey cache
+    participant DB as RDS MySQL
+    participant EFS as EFS uploads
+
+    User->>ALB: HTTP request on port 80
+    ALB->>WP: Forward to a healthy target
+    WP-->>Cache: Look up cached object/session
+    alt Cache hit
+        Cache-->>WP: Cached value
+    else Cache miss or cache not configured
+        WP->>DB: Query WordPress data on port 3306
+        DB-->>WP: Posts, settings, and metadata
+        WP-->>Cache: Store reusable result
+    end
+    opt Request needs uploaded media
+        WP->>EFS: Read shared upload over NFS
+        EFS-->>WP: Media file
+    end
+    WP-->>ALB: Generated page or asset
+    ALB-->>User: HTTP response

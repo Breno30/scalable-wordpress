@@ -95,9 +95,11 @@ wp --allow-root config create \
   --skip-salts
 
 mkdir -p /efs "$WORDPRESS_DIR/wp-content/uploads"
-mount -t efs -o tls '${efs_file_id}:/' /efs
+echo '${efs_file_id}:/ /efs efs _netdev,tls 0 0' >> /etc/fstab
+mount /efs
 mkdir -p /efs/uploads
-mount --bind /efs/uploads "$WORDPRESS_DIR/wp-content/uploads"
+echo "/efs/uploads $WORDPRESS_DIR/wp-content/uploads none bind 0 0" >> /etc/fstab
+mount "$WORDPRESS_DIR/wp-content/uploads"
 chown -R nginx:nginx "$WORDPRESS_DIR" /efs/uploads
 
 # Validate configuration before exposing the instance to the load balancer.

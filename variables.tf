@@ -32,3 +32,8 @@ variable "db_user" {
   type    = string
   default = "wordpress"
 }
+
+variable "acm_certificate_arn" {
+  type    = string
+  default = null
+}

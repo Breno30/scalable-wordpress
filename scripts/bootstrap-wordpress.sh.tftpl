@@ -7,6 +7,7 @@ dnf update -y
 # Installing the full curl package here would conflict with that default.
 dnf install -y \
   amazon-efs-utils \
+  jq \
   mariadb105 \
   nginx \
   nfs-utils \
@@ -70,12 +71,24 @@ curl --fail --location --retry 5 \
   --output /usr/local/bin/wp
 chmod 0755 /usr/local/bin/wp
 
+secret_json="$(
+  aws secretsmanager get-secret-value \
+    --secret-id '${db_secret_arn}' \
+    --query SecretString \
+    --output text
+)"
+
+db_user="$(jq -er '.username' <<<"$secret_json")"
+db_password="$(jq -er '.password' <<<"$secret_json")"
+
+unset secret_json
+
 wp --allow-root core download --path="$WORDPRESS_DIR"
 wp --allow-root config create \
   --path="$WORDPRESS_DIR" \
   --dbname='${db_name}' \
-  --dbuser='${db_user}' \
-  --dbpass='${db_password}' \
+  --dbuser="$db_user" \
+  --dbpass="$db_password" \
   --dbhost='${db_host}' \
   --dbcharset='utf8mb4' \
   --dbcollate='utf8mb4_unicode_ci' \

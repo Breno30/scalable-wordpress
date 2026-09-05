@@ -8,7 +8,7 @@ sequenceDiagram
     participant EFS as EFS uploads
 
     User->>ALB: HTTP request on port 80
-    ALB->>WP: Forward to a healthy target
+    ALB->>WP: Forward to a target
     WP-->>Cache: Look up cached object/session
     alt Cache hit
         Cache-->>WP: Cached value

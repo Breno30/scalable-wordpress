@@ -1,0 +1,34 @@
+# Input variables
+variable "ami_id" {
+  type        = string
+  description = "AMI used by the launch template"
+}
+
+variable "instance_type" {
+  type = string
+}
+
+variable "min_size" {
+  type    = number
+  default = 1
+}
+
+variable "max_size" {
+  type    = number
+  default = 2
+}
+
+variable "desired_capacity" {
+  type    = number
+  default = 1
+}
+
+variable "db_name" {
+  type    = string
+  default = "wordpress"
+}
+
+variable "db_user" {
+  type    = string
+  default = "wordpress"
+}

@@ -35,7 +35,7 @@ variable "db_user" {
   default = "wordpress"
 }
 
-variable "acm_certificate_arn" {
-  type    = string
-  default = null
+variable "domain_name" {
+  type        = string
+  description = "The target domain name (e.g., example.com)"
 }

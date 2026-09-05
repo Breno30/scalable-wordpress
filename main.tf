@@ -155,10 +155,6 @@ resource "aws_route_table_association" "private_app" {
 }
 
 # Database
-resource "random_string" "db_password" {
-  length  = 16
-  special = false
-}
 
 resource "aws_db_subnet_group" "app" {
   name = "wordpress-db"
@@ -187,7 +183,7 @@ resource "aws_db_instance" "app" {
   instance_class         = "db.t3.micro"
   db_name                = var.db_name
   username               = var.db_user
-  password               = random_string.db_password.result
+  manage_master_user_password = true
   allocated_storage      = 20
   db_subnet_group_name   = aws_db_subnet_group.app.name
   vpc_security_group_ids = [aws_security_group.db.id]
@@ -300,6 +296,48 @@ resource "aws_efs_mount_target" "app" {
 }
 
 # Application compute
+resource "aws_iam_role" "wordpress" {
+  name = "wordpress-ec2"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+
+    Statement = [{
+      Effect = "Allow"
+
+      Principal = {
+        Service = "ec2.amazonaws.com"
+      }
+
+      Action = "sts:AssumeRole"
+    }]
+  })
+  
+}
+
+resource "aws_iam_role_policy" "read_database_secret" {
+  name = "read-wordpress-database-secret"
+  role = aws_iam_role.wordpress.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "secretsmanager:GetSecretValue"
+      ]
+      Resource = aws_db_instance.app.master_user_secret[0].secret_arn
+    }]
+  })
+  
+}
+
+resource "aws_iam_instance_profile" "wordpress" {
+  name = "wordpress-ec2"
+  role = aws_iam_role.wordpress.name
+}
+
 resource "aws_launch_template" "app" {
 
   image_id = var.ami_id
@@ -307,6 +345,10 @@ resource "aws_launch_template" "app" {
   instance_type = var.instance_type
 
   key_name = "wordpress"
+
+  iam_instance_profile {
+    arn = aws_iam_instance_profile.wordpress.arn
+  }
 
   network_interfaces {
     associate_public_ip_address = false
@@ -317,8 +359,7 @@ resource "aws_launch_template" "app" {
   user_data = base64encode(templatefile("${path.module}/scripts/bootstrap-wordpress.sh.tftpl", {
     db_host       = aws_db_instance.app.address
     db_name       = aws_db_instance.app.db_name
-    db_password   = aws_db_instance.app.password
-    db_user       = aws_db_instance.app.username
+    db_secret_arn = aws_db_instance.app.master_user_secret[0].secret_arn
     efs_file_id   = aws_efs_file_system.app.id
     wordpress_dir = "/usr/share/nginx/html"
   }))

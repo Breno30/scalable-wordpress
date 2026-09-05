@@ -47,6 +47,7 @@ resource "aws_lb_listener" "https" {
   count             = var.acm_certificate_arn != null ? 1 : 0
   load_balancer_arn = aws_lb.app.arn
   port              = 443
+  protocol          = "HTTPS"
   ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-2021-06"
   certificate_arn   = var.acm_certificate_arn
 

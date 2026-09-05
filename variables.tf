@@ -2,6 +2,7 @@
 variable "ami_id" {
   type        = string
   description = "AMI used by the launch template"
+  default     = "ami-0bdc7d025135d7b49" // Amazon Linux 2023 us-east-1
 }
 
 variable "instance_type" {

@@ -36,17 +36,38 @@ resource "aws_lb_listener" "app" {
   port              = 80
   protocol          = "HTTP"
 
-  default_action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.app.arn
+  dynamic "default_action" {
+    for_each = var.domain_name != "" ? [1] : []
+    content {
+      type = "redirect"
+
+      redirect {
+        port        = "443"
+        protocol    = "HTTPS"
+        status_code = "HTTP_301"
+      }
+    }
+  }
+
+  dynamic "default_action" {
+    for_each = var.domain_name == "" ? [1] : []
+    content {
+      type             = "forward"
+      target_group_arn = aws_lb_target_group.app.arn
+    }
   }
 
 }
 
 resource "aws_acm_certificate" "cert" {
-  count             = var.domain_name != null ? 1 : 0
+  count             = var.domain_name != "" ? 1 : 0
   domain_name       = var.domain_name
   validation_method = "DNS"
+}
+
+resource "aws_acm_certificate_validation" "cert" {
+  count           = length(aws_acm_certificate.cert)
+  certificate_arn = aws_acm_certificate.cert[0].arn
 }
 
 resource "aws_lb_listener" "https" {
@@ -55,7 +76,7 @@ resource "aws_lb_listener" "https" {
   port              = 443
   protocol          = "HTTPS"
   ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-2021-06"
-  certificate_arn   = aws_acm_certificate.cert[0].arn
+  certificate_arn   = aws_acm_certificate_validation.cert[0].certificate_arn
 
   default_action {
     type             = "forward"

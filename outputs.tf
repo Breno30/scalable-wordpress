@@ -6,7 +6,7 @@ output "url" {
 output "acm_validation_cnames" {
   description = "DNS records required to validate the ACM certificate"
 
-  value = var.domain_name == null ? null : [
+  value = length(aws_acm_certificate.cert) == 0 ? null : [
     for option in aws_acm_certificate.cert[0].domain_validation_options : {
       name  = option.resource_record_name
       type  = option.resource_record_type

@@ -94,6 +94,19 @@ wp --allow-root config create \
   --dbcollate='utf8mb4_unicode_ci' \
   --skip-salts
 
+# Configure phpredis client
+wp --allow-root config set WP_REDIS_CLIENT 'phpredis' --path="$WORDPRESS_DIR"
+wp --allow-root config set WP_REDIS_SCHEME 'tls' --path="$WORDPRESS_DIR"
+wp --allow-root config set WP_REDIS_HOST '${cache_host}' --path="$WORDPRESS_DIR"
+wp --allow-root config set WP_REDIS_PORT '${cache_port}' --raw --path="$WORDPRESS_DIR"
+wp --allow-root config set WP_REDIS_PREFIX 'wordpress:' --path="$WORDPRESS_DIR"
+wp --allow-root config set WP_REDIS_TIMEOUT '1' --raw --path="$WORDPRESS_DIR"
+wp --allow-root config set WP_REDIS_READ_TIMEOUT '1' --raw --path="$WORDPRESS_DIR"
+
+wp --allow-root plugin install redis-cache --version=2.8.0 --force --path="$WORDPRESS_DIR" --activate
+
+cp "$WORDPRESS_DIR/wp-content/plugins/redis-cache/includes/object-cache.php" "$WORDPRESS_DIR/wp-content/object-cache.php"
+
 mkdir -p /efs "$WORDPRESS_DIR/wp-content/uploads"
 echo '${efs_file_id}:/ /efs efs _netdev,tls 0 0' >> /etc/fstab
 mount /efs

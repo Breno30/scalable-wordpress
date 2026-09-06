@@ -19,6 +19,8 @@ resource "aws_launch_template" "app" {
   }
 
   user_data = base64encode(templatefile("${path.module}/scripts/bootstrap-wordpress.sh.tftpl", {
+    cache_host    = aws_elasticache_serverless_cache.app.endpoint[0].address
+    cache_port    = aws_elasticache_serverless_cache.app.endpoint[0].port
     db_host       = aws_db_instance.app.address
     db_name       = aws_db_instance.app.db_name
     db_secret_arn = aws_db_instance.app.master_user_secret[0].secret_arn

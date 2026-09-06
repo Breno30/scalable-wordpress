@@ -50,16 +50,15 @@ resource "aws_acm_certificate" "cert" {
 }
 
 resource "aws_lb_listener" "https" {
-  count             = var.domain_name != null ? 1 : 0
+  count             = length(aws_acm_certificate.cert)
   load_balancer_arn = aws_lb.app.arn
   port              = 443
   protocol          = "HTTPS"
   ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-2021-06"
-  certificate_arn   = aws_acm_certificate.cert.arn
+  certificate_arn   = aws_acm_certificate.cert[0].arn
 
   default_action {
     type             = "forward"
     target_group_arn = aws_lb_target_group.app.arn
   }
 }
-

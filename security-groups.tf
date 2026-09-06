@@ -53,13 +53,21 @@ resource "aws_security_group" "redis" {
 
 resource "aws_security_group" "alb" {
   name        = "wordpress-alb"
-  description = "Allow public HTTP traffic to the application load balancer"
+  description = "Allow public HTTP and HTTPS traffic to the application load balancer"
   vpc_id      = aws_vpc.app.id
 
   ingress {
     description = "HTTP from the internet"
     from_port   = 80
     to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    description = "HTTPS from the internet"
+    from_port   = 443
+    to_port     = 443
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }

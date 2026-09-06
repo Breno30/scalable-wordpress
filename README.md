@@ -109,12 +109,17 @@ domain_name = "wordpress.example.com"
 
 ```bash
 terraform apply -target=aws_acm_certificate.cert
-terraform output certificate_validation_cname
 ```
+
+Terraform prints a DNS tutorial with the exact CNAME type, name, and target to use.
 
 #### Step 4: Validate the certificate
 
-At your DNS provider, create the displayed `CNAME`. Use `name` as the record name and `points_to` as its target, then wait for the record to propagate.
+Follow the printed tutorial to create the CNAME at your DNS provider, then wait for the record to propagate. You can display the instructions again at any time:
+
+```bash
+terraform output -raw certificate_validation_tutorial
+```
 
 #### Step 5: Review and deploy the complete stack
 
@@ -125,7 +130,27 @@ terraform apply
 
 Terraform waits for ACM validation, configures HTTPS, and redirects HTTP requests to the secure URL.
 
-#### Step 6: Open WordPress
+#### Step 6: Point the subdomain to the load balancer
+
+The ACM validation CNAME proves that you control the domain, but it does not send traffic to WordPress. Create a second DNS record using the values printed in `domain_routing_tutorial`:
+
+```text
+Type:   CNAME
+Name:   wordpress.example.com
+Target: <the value of load_balancer_dns_name>
+```
+
+Some DNS providers expect only the host label, such as `wordpress`, in the Name field and append the parent domain automatically.
+
+Display the exact instructions again with:
+
+```bash
+terraform output -raw domain_routing_tutorial
+```
+
+Keep the ACM validation CNAME in place so AWS can renew the certificate automatically.
+
+#### Step 7: Open WordPress
 
 ```bash
 terraform output -raw url

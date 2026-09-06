@@ -67,16 +67,14 @@ terraform init
 
 #### Step 2: Review the execution plan
 
-Passing an empty domain disables ACM and serves the load balancer over HTTP.
-
 ```bash
-terraform plan -var='domain_name='
+terraform plan
 ```
 
 #### Step 3: Deploy the stack
 
 ```bash
-terraform apply -var='domain_name='
+terraform apply
 ```
 
 #### Step 4: Open WordPress

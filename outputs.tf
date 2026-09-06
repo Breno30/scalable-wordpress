@@ -1,16 +1,14 @@
 output "url" {
-  value       = aws_lb.app.dns_name
-  description = "final load balancer url"
+  value       = var.domain_name != "" ? "https://${var.domain_name}" : "http://${aws_lb.app.dns_name}"
+  description = "URL to open after deployment"
 }
 
-output "acm_validation_cnames" {
-  description = "DNS records required to validate the ACM certificate"
+output "certificate_validation_cname" {
+  description = "Create this CNAME at your DNS provider, then run terraform apply again"
 
-  value = length(aws_acm_certificate.cert) == 0 ? null : [
-    for option in aws_acm_certificate.cert[0].domain_validation_options : {
-      name  = option.resource_record_name
-      type  = option.resource_record_type
-      value = option.resource_record_value
-    }
-  ]
+  value = length(aws_acm_certificate.cert) == 0 ? null : {
+    type      = one(aws_acm_certificate.cert[0].domain_validation_options).resource_record_type
+    name      = one(aws_acm_certificate.cert[0].domain_validation_options).resource_record_name
+    points_to = one(aws_acm_certificate.cert[0].domain_validation_options).resource_record_value
+  }
 }

@@ -29,35 +29,67 @@ See the [architecture diagrams](diagrams/README.md) and the [networking walkthro
 
 You need Terraform, AWS credentials, an Amazon Linux 2023 AMI ID, and an EC2 key pair named `wordpress` in `us-east-1`.
 
-Create `terraform.tfvars`:
+<details>
+<summary>Deploy without a custom domain</summary>
 
-```hcl
-ami_id        = "ami-xxxxxxxxxxxxxxxxx"
-instance_type = "t3.micro"
-```
-
-Then deploy:
+#### Step 1: Initialize Terraform
 
 ```bash
 export AWS_REGION=us-east-1
 terraform init
-terraform fmt -check
-terraform validate
-terraform plan
+```
+
+#### Step 2: Deploy the stack
+
+```bash
 terraform apply
 ```
 
-Open the URL printed by Terraform, or verify it from the terminal:
+#### Step 3: Open WordPress
+
+Terraform prints an HTTP load-balancer URL when the deployment finishes.
+
+</details>
+
+<details>
+<summary>Deploy with a custom domain</summary>
+
+#### Step 1: Initialize Terraform
 
 ```bash
-curl --fail --location "http://$(terraform output -raw url)/"
+export AWS_REGION=us-east-1
+terraform init
 ```
 
-The first boot can take several minutes while WordPress and its packages are installed. When finished, destroy the stack to stop ongoing charges:
+#### Step 2: Configure the domain
+
+Create `terraform.tfvars` with the hostname that will serve WordPress:
+
+```hcl
+domain_name = "wordpress.example.com"
+```
+
+#### Step 3: Request the certificate
 
 ```bash
-terraform destroy
+terraform apply -target=aws_acm_certificate.cert
+terraform output certificate_validation_cname
 ```
+
+#### Step 4: Validate the certificate
+
+At your DNS provider, create the displayed `CNAME`: use `name` as the record
+name and `points_to` as its target. Wait for the record to propagate.
+
+#### Step 5: Deploy the complete stack
+
+```bash
+terraform apply
+```
+
+Terraform waits for ACM to validate the certificate, then prints the HTTPS URL.
+
+</details>
 
 ## Deployment evidence
 
@@ -68,7 +100,7 @@ For a new deployment, these commands provide reproducible evidence:
 ```bash
 terraform state list
 terraform output -raw url
-curl --fail --location "http://$(terraform output -raw url)/"
+curl --fail --location "$(terraform output -raw url)"
 ```
 
 The final `curl` verifies the complete request path: ALB → Nginx → PHP-FPM → WordPress.

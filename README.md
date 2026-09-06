@@ -124,7 +124,6 @@ terraform output -raw certificate_validation_tutorial
 #### Step 5: Review and deploy the complete stack
 
 ```bash
-terraform plan
 terraform apply
 ```
 

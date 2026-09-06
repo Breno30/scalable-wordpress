@@ -1,36 +1,62 @@
 # Scalable WordPress on AWS
 
-A small Terraform project that shows how to run WordPress with a production-style AWS architecture instead of a single public server.
+A production-style WordPress architecture built with Terraform. This project replaces the usual single public server with a multi-tier AWS design that can scale horizontally while keeping application and data services off the public internet.
 
-The stack keeps the web servers private, distributes traffic through an Application Load Balancer, scales EC2 instances automatically, and separates shared files, database data, and cache traffic into managed AWS services.
+It demonstrates practical infrastructure engineering: network isolation, least-privilege access, automated bootstrapping, shared state, load balancing, autoscaling, managed secrets, TLS, and explicit cost/availability trade-offs.
 
 [![WordPress request flow through AWS](diagrams/request-flow.svg)](diagrams/request-flow.mmd)
 
-_A request travels from the public load balancer to private WordPress instances and managed AWS data services. Select the diagram to view its Mermaid source._
+_Select the diagram to view the Mermaid source._
 
-## Why this project is useful
+## What this project demonstrates
 
-- **Safer network design:** only the load balancer is open to web traffic. EC2 and RDS have no public access.
-- **Horizontal scaling:** an Auto Scaling group can add WordPress instances as CPU usage grows.
-- **Shared WordPress uploads:** EFS gives every instance access to the same media files.
-- **Managed data services:** RDS runs MySQL and ElastiCache Serverless runs Valkey.
-- **No database password in Terraform:** RDS creates the password in Secrets Manager, and EC2 reads it through a restricted IAM role.
-- **Repeatable setup:** EC2 bootstraps Nginx, PHP-FPM, WP-CLI, WordPress, and the EFS mount automatically.
+| Engineering concern | Implementation |
+| --- | --- |
+| High availability | Resources span two Availability Zones, with an ALB distributing requests across an Auto Scaling group. |
+| Network security | Only the ALB is public. EC2 runs without public IP addresses, and RDS is not publicly accessible. |
+| Horizontal scaling | Target-tracking scaling adjusts EC2 capacity around 60% average CPU utilization. |
+| Shared application state | EFS stores WordPress uploads so every EC2 instance sees the same media files. |
+| Managed data services | RDS provides MySQL and ElastiCache Serverless provides a Valkey-compatible object cache. |
+| Secrets management | RDS generates its password in Secrets Manager; EC2 retrieves it with a narrowly scoped IAM role. |
+| Repeatable provisioning | EC2 user data installs and configures Nginx, PHP-FPM, WP-CLI, WordPress, EFS, and Redis caching. |
+| HTTPS support | An optional custom domain enables ACM certificate validation and HTTP-to-HTTPS redirects. |
 
 ## Architecture
 
-The VPC spans `us-east-1a` and `us-east-1b`. Each private application subnet uses a NAT gateway in the same Availability Zone for outbound package downloads. The database subnets have no internet route.
+The VPC uses three network tiers across `us-east-1a` and `us-east-1b`:
 
-See the [architecture diagrams](diagrams/README.md) and the [networking walkthrough](docs/public-private-networking.md) for more detail.
+1. **Public subnets** contain the internet-facing Application Load Balancer and one NAT gateway per Availability Zone.
+2. **Private application subnets** contain WordPress EC2 instances, EFS mount targets, and Valkey. Instances can download updates through NAT but cannot receive connections directly from the internet.
+3. **Isolated database subnets** contain RDS and have no route to the internet.
 
-> Valkey is provisioned and the PHP Redis extension is installed, but WordPress is not yet configured to use the cache endpoint.
+Traffic follows this path:
+
+```text
+Internet → Application Load Balancer → private EC2 instances
+                                           ├── RDS MySQL
+                                           ├── EFS uploads
+                                           └── Valkey object cache
+```
+
+Security groups authorize traffic by source security group rather than broad internal CIDR ranges: the ALB can reach WordPress, and only WordPress can reach MySQL, EFS, and Valkey.
+
+For a deeper explanation, see the [networking walkthrough](docs/public-private-networking.md) and [editable Mermaid diagram](diagrams/request-flow.mmd).
 
 ## Deploy
 
-You need Terraform, AWS credentials, an Amazon Linux 2023 AMI ID, and an EC2 key pair named `wordpress` in `us-east-1`.
+### Prerequisites
+
+Before deploying, you need:
+
+- Terraform installed locally
+- AWS credentials with permission to create the resources in this repository
+- An Amazon Linux 2023 AMI in `us-east-1` (the default AMI can be overridden with `ami_id`)
+- A DNS name you control if you want HTTPS with a custom domain
+
+> **Cost warning:** this stack creates billable AWS resources, including two NAT gateways, an Application Load Balancer, RDS, EFS, EC2, and ElastiCache. Review the [estimated cost](#estimated-cost) before applying, and run `terraform destroy` when finished.
 
 <details>
-<summary>Deploy without a custom domain</summary>
+<summary><strong>Deploy without a custom domain</strong></summary>
 
 #### Step 1: Initialize Terraform
 
@@ -39,20 +65,32 @@ export AWS_REGION=us-east-1
 terraform init
 ```
 
-#### Step 2: Deploy the stack
+#### Step 2: Review the execution plan
+
+Passing an empty domain disables ACM and serves the load balancer over HTTP.
 
 ```bash
-terraform apply
+terraform plan -var='domain_name='
 ```
 
-#### Step 3: Open WordPress
+#### Step 3: Deploy the stack
 
-Terraform prints an HTTP load-balancer URL when the deployment finishes.
+```bash
+terraform apply -var='domain_name='
+```
+
+#### Step 4: Open WordPress
+
+```bash
+terraform output -raw url
+```
+
+Open the printed load-balancer URL to complete the WordPress setup.
 
 </details>
 
 <details>
-<summary>Deploy with a custom domain</summary>
+<summary><strong>Deploy with a custom domain and HTTPS</strong></summary>
 
 #### Step 1: Initialize Terraform
 
@@ -78,32 +116,47 @@ terraform output certificate_validation_cname
 
 #### Step 4: Validate the certificate
 
-At your DNS provider, create the displayed `CNAME`: use `name` as the record
-name and `points_to` as its target. Wait for the record to propagate.
+At your DNS provider, create the displayed `CNAME`. Use `name` as the record name and `points_to` as its target, then wait for the record to propagate.
 
-#### Step 5: Deploy the complete stack
+#### Step 5: Review and deploy the complete stack
 
 ```bash
+terraform plan
 terraform apply
 ```
 
-Terraform waits for ACM to validate the certificate, then prints the HTTPS URL.
+Terraform waits for ACM validation, configures HTTPS, and redirects HTTP requests to the secure URL.
+
+#### Step 6: Open WordPress
+
+```bash
+terraform output -raw url
+```
 
 </details>
 
-## Deployment evidence
+## Repository guide
 
-This stack has been created and torn down from the local Terraform state. The previous state snapshot records the VPC and six subnets, two NAT gateways, ALB, Auto Scaling group, RDS, EFS mount targets, Valkey cache, IAM resources, and service-specific security groups. The current state is empty, so there is no live public URL or ongoing deployment to demonstrate.
+| Path | Purpose |
+| --- | --- |
+| `network.tf` | VPC, six subnets, internet gateway, NAT gateways, and route tables |
+| `security-groups.tf` | Service-to-service network boundaries |
+| `load-balancer.tf` | ALB, health checks, ACM certificate, HTTPS listener, and redirect |
+| `compute.tf` | Launch template, Auto Scaling group, and CPU target tracking |
+| `database.tf` | Private RDS MySQL instance with an AWS-managed password |
+| `storage.tf` | Shared EFS filesystem and mount targets |
+| `cache.tf` | ElastiCache Serverless for Valkey |
+| `iam.tf` | Least-privilege EC2 access to the database secret |
+| `scripts/bootstrap-wordpress.sh.tftpl` | Automated WordPress, Nginx, PHP, EFS, and cache configuration |
+| `docs/` and `diagrams/` | Architecture explanations and diagram source |
 
-For a new deployment, these commands provide reproducible evidence:
+## Design decisions and trade-offs
 
-```bash
-terraform state list
-terraform output -raw url
-curl --fail --location "$(terraform output -raw url)"
-```
-
-The final `curl` verifies the complete request path: ALB → Nginx → PHP-FPM → WordPress.
+- **One NAT gateway per Availability Zone** avoids a cross-zone dependency for private workloads, but it is the largest fixed cost. A development variant could use one NAT gateway at the cost of lower resilience.
+- **EFS for uploads** makes EC2 instances replaceable and supports horizontal scaling, though it costs more and has different latency characteristics than local disk.
+- **AWS-managed database credentials** keep the password out of Terraform configuration and state inputs. The instance role can read only that specific secret.
+- **Conditional TLS** keeps the project deployable without a domain while supporting ACM-managed certificates and HTTPS redirects when a domain is provided.
+- **User-data bootstrapping** makes the example self-contained. A larger production platform could build immutable images with Packer to shorten instance startup time.
 
 ## Estimated cost
 
@@ -120,10 +173,12 @@ Expect roughly **$130–$150 per month** for a small, continuously running deplo
 | EFS, Secrets Manager, and small variable charges | $1–$5 |
 | **Estimated total** | **$130–$150/month** |
 
-The two NAT gateways are the largest fixed cost. A development version could use one NAT gateway and save about **$33/month**, with lower Availability Zone resilience. Data transfer, NAT processing, ALB capacity, cache requests, EFS usage, backups, and CPU credits can increase the total.
+Data transfer, NAT processing, ALB capacity, cache requests, EFS usage, backups, and CPU credits can increase the total. Prices change, so confirm the estimate with the [AWS Pricing Calculator](https://calculator.aws/) before deploying.
 
-Prices change, so confirm the estimate with the [AWS Pricing Calculator](https://calculator.aws/) before deploying. The estimate is based on AWS pricing for [NAT Gateway](https://aws.amazon.com/vpc/pricing/), [Application Load Balancer](https://aws.amazon.com/elasticloadbalancing/pricing/), [EC2 T3](https://aws.amazon.com/ec2/instance-types/t3/), [RDS for MySQL](https://aws.amazon.com/rds/mysql/pricing/), [ElastiCache](https://aws.amazon.com/elasticache/pricing/), and [Secrets Manager](https://aws.amazon.com/secrets-manager/pricing/), checked September 2026.
+## Clean up
 
-## Current scope
+Avoid ongoing AWS charges when you are finished:
 
-This repository demonstrates the infrastructure and bootstrap flow. Before treating it as a production platform, add HTTPS, stronger backup and deletion protection, Systems Manager access, monitoring, a dedicated health endpoint, and WordPress cache configuration.
+```bash
+terraform destroy
+```

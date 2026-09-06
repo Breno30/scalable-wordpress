@@ -38,4 +38,12 @@ variable "db_user" {
 variable "domain_name" {
   type        = string
   description = "The target domain name (e.g., example.com)"
+
+  validation {
+    condition = var.domain_name == "" || can(regex(
+      "^(\\*\\.)?([A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?\\.)+[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?$",
+      var.domain_name
+    ))
+    error_message = "domain_name must be null or a valid DNS name such as example.com or *.example.com."
+  }
 }

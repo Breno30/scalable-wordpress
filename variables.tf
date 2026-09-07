@@ -1,4 +1,21 @@
 # Input variables
+variable "aws_region" {
+  type        = string
+  description = "AWS Region in which to deploy the stack"
+  default     = "us-east-1"
+}
+
+variable "availability_zones" {
+  type        = list(string)
+  description = "Two Availability Zones used by the stack"
+  default     = ["us-east-1a", "us-east-1b"]
+
+  validation {
+    condition     = length(var.availability_zones) == 2
+    error_message = "availability_zones must contain exactly two Availability Zones."
+  }
+}
+
 variable "ami_id" {
   type        = string
   description = "AMI used by the launch template"

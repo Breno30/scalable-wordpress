@@ -10,14 +10,14 @@ resource "aws_vpc" "app" {
 resource "aws_subnet" "app_a" {
   vpc_id            = aws_vpc.app.id
   cidr_block        = "10.0.1.0/24"
-  availability_zone = "us-east-1a"
+  availability_zone = var.availability_zones[0]
 
 }
 
 resource "aws_subnet" "app_b" {
   vpc_id            = aws_vpc.app.id
   cidr_block        = "10.0.2.0/24"
-  availability_zone = "us-east-1b"
+  availability_zone = var.availability_zones[1]
 
 }
 
@@ -27,26 +27,26 @@ resource "aws_subnet" "app_b" {
 resource "aws_subnet" "private_app_a" {
   vpc_id            = aws_vpc.app.id
   cidr_block        = "10.0.21.0/24"
-  availability_zone = "us-east-1a"
+  availability_zone = var.availability_zones[0]
 }
 
 resource "aws_subnet" "private_app_b" {
   vpc_id            = aws_vpc.app.id
   cidr_block        = "10.0.22.0/24"
-  availability_zone = "us-east-1b"
+  availability_zone = var.availability_zones[1]
 }
 
 # Private database subnets have no route to the internet gateway.
 resource "aws_subnet" "db_a" {
   vpc_id            = aws_vpc.app.id
   cidr_block        = "10.0.11.0/24"
-  availability_zone = "us-east-1a"
+  availability_zone = var.availability_zones[0]
 }
 
 resource "aws_subnet" "db_b" {
   vpc_id            = aws_vpc.app.id
   cidr_block        = "10.0.12.0/24"
-  availability_zone = "us-east-1b"
+  availability_zone = var.availability_zones[1]
 }
 
 locals {

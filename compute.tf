@@ -6,8 +6,6 @@ resource "aws_launch_template" "app" {
 
   instance_type = var.instance_type
 
-  key_name = "wordpress"
-
   iam_instance_profile {
     arn = aws_iam_instance_profile.wordpress.arn
   }

@@ -1,1 +1,10 @@
-domain_name = "wp.brenodonascimento.com"
+domain_name = "wordpress.example.com"
+
+# Optional: defaults to us-east-1.
+# aws_region = "us-east-1"
+
+# Optional: defaults to us-east-1a and us-east-1b.
+# availability_zones = ["us-east-1a", "us-east-1b"]
+
+# Optional AMI override.
+# ami_id = "ami-0123456789abcdef0"

@@ -94,6 +94,9 @@ wp --allow-root config create \
   --dbcollate='utf8mb4_unicode_ci' \
   --skip-salts
 
+# The ALB terminates HTTPS and forwards HTTP to Nginx. 
+sed -i '/\/\* That.s all, stop editing!/i if (isset($_SERVER["HTTP_X_FORWARDED_PROTO"]) && $_SERVER["HTTP_X_FORWARDED_PROTO"] === "https") { $_SERVER["HTTPS"] = "on"; }\n' "$WORDPRESS_DIR/wp-config.php"
+
 # Configure phpredis client
 wp --allow-root config set WP_REDIS_CLIENT 'phpredis' --path="$WORDPRESS_DIR"
 wp --allow-root config set WP_REDIS_SCHEME 'tls' --path="$WORDPRESS_DIR"

@@ -18,12 +18,15 @@ _Select the diagram to view the Mermaid source._
 | Shared application state | EFS stores WordPress uploads so every EC2 instance sees the same media files. |
 | Managed data services | RDS provides MySQL and ElastiCache Serverless provides a Valkey-compatible object cache. |
 | Secrets management | RDS generates its password in Secrets Manager; EC2 retrieves it with a narrowly scoped IAM role. |
+| Administrative access | Systems Manager Session Manager replaces SSH keys, public IPs, and inbound port 22. |
 | Repeatable provisioning | EC2 user data installs and configures Nginx, PHP-FPM, WP-CLI, WordPress, EFS, and Redis caching. |
 | HTTPS support | An optional custom domain enables ACM certificate validation and HTTP-to-HTTPS redirects. |
 
 ## Architecture
 
-The VPC uses three network tiers across `us-east-1a` and `us-east-1b`:
+The VPC uses three network tiers across two Availability Zones. The defaults
+are `us-east-1a` and `us-east-1b`; callers can provide `availability_zones`
+when they need different placement:
 
 1. **Public subnets** contain the internet-facing Application Load Balancer and one NAT gateway per Availability Zone.
 2. **Private application subnets** contain WordPress EC2 instances, EFS mount targets, and Valkey. Instances can download updates through NAT but cannot receive connections directly from the internet.
@@ -50,8 +53,9 @@ Before deploying, you need:
 
 - Terraform installed locally
 - AWS credentials with permission to create the resources in this repository
-- An Amazon Linux 2023 AMI in `us-east-1` (the default AMI can be overridden with `ami_id`)
 - A DNS name you control if you want HTTPS with a custom domain
+
+The default AMI is `ami-0bdc7d025135d7b49`. Set `ami_id` to use another image.
 
 > **Cost warning:** this stack creates billable AWS resources, including two NAT gateways, an Application Load Balancer, RDS, EFS, EC2, and ElastiCache. Review the [estimated cost](#estimated-cost) before applying, and run `terraform destroy` when finished.
 
@@ -61,7 +65,6 @@ Before deploying, you need:
 #### Step 1: Initialize Terraform
 
 ```bash
-export AWS_REGION=us-east-1
 terraform init
 ```
 
@@ -93,7 +96,6 @@ Open the printed load-balancer URL to complete the WordPress setup.
 #### Step 1: Initialize Terraform
 
 ```bash
-export AWS_REGION=us-east-1
 terraform init
 ```
 
@@ -169,8 +171,23 @@ terraform output -raw url
 | `storage.tf` | Shared EFS filesystem and mount targets |
 | `cache.tf` | ElastiCache Serverless for Valkey |
 | `iam.tf` | Least-privilege EC2 access to the database secret |
+| `providers.tf` | Terraform/provider constraints and AWS Region configuration |
 | `scripts/bootstrap-wordpress.sh.tftpl` | Automated WordPress, Nginx, PHP, EFS, and cache configuration |
 | `docs/` and `diagrams/` | Architecture explanations and diagram source |
+
+## Connect without SSH
+
+The instances have no public IP address, SSH key pair, or inbound SSH rule.
+After deployment, select an instance in the EC2 console and choose
+**Connect → Session Manager**, or start a session with the AWS CLI:
+
+```bash
+aws ssm start-session --target <instance-id> --region <aws-region>
+```
+
+The instance role includes `AmazonSSMManagedInstanceCore`, and private
+instances reach the Systems Manager service through their Availability Zone's
+NAT gateway.
 
 ## Design decisions and trade-offs
 

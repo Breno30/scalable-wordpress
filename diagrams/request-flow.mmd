@@ -12,7 +12,7 @@ sequenceDiagram
     WP-->>Cache: Look up cached object/session
     alt Cache hit
         Cache-->>WP: Cached value
-    else Cache miss or cache not configured
+    else Cache miss
         WP->>DB: Query WordPress data on port 3306
         DB-->>WP: Posts, settings, and metadata
         WP-->>Cache: Store reusable result

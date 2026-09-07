@@ -21,6 +21,10 @@ the same Availability Zone. This lets an instance download operating-system
 and WordPress packages without allowing the internet to initiate a connection
 to that instance.
 
+Administrative shell access uses AWS Systems Manager Session Manager. The
+instances do not require SSH keys, public IP addresses, or an inbound port 22
+rule.
+
 ## Step 3: Keep the database isolated
 
 The database subnets (`10.0.11.0/24` and `10.0.12.0/24`) have no default route

@@ -14,18 +14,13 @@ Open this README and select **Markdown: Open Preview to the Side**.
 
 ## Diagrams
 
-- [AWS architecture](./aws-architecture.mmd) shows where each resource sits and
-  how network traffic moves through the stack.
 - [Request flow](./request-flow.mmd) follows one browser request through
-  WordPress and its backing services.
-- [Terraform dependencies](./terraform-dependencies.mmd) shows the main resource
-  creation dependencies represented by `main.tf`.
+  WordPress, its configured Valkey object cache, RDS, and EFS. The rendered
+  [SVG](./request-flow.svg) is embedded in the repository README.
 - [Public/private networking walkthrough](../docs/public-private-networking.md)
   explains the subnet routes and request path step by step.
 
-The AWS architecture source is kept in one place to prevent the documentation
-from drifting. Open [aws-architecture.mmd](./aws-architecture.mmd) to preview it.
-
-Dashed cache connections indicate intended application traffic: Terraform
-provisions Valkey and the PHP Redis extension, but `main.tf` does not yet
-configure WordPress to use the cache endpoint.
+The bootstrap script installs and activates the Redis Object Cache plugin,
+configures its Valkey endpoint and TLS connection, and installs its object-cache
+drop-in. The dashed arrows in the sequence diagram represent responses rather
+than unconfigured traffic.

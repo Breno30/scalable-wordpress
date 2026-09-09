@@ -18,11 +18,11 @@ variable "name_prefix" {
 
 variable "availability_zones" {
   type        = list(string)
-  description = "Two Availability Zones used by the stack"
-  default     = ["us-east-1a", "us-east-1b"]
+  description = "Optional pair of Availability Zones used by the stack; defaults to two available zones in aws_region"
+  default     = null
 
   validation {
-    condition     = length(var.availability_zones) == 2
+    condition     = var.availability_zones == null || length(var.availability_zones) == 2
     error_message = "availability_zones must contain exactly two Availability Zones."
   }
 }
@@ -66,6 +66,7 @@ variable "db_user" {
 variable "domain_name" {
   type        = string
   description = "The target domain name (e.g., example.com)"
+  default     = ""
 
   validation {
     condition = var.domain_name == "" || can(regex(

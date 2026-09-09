@@ -4,7 +4,7 @@ domain_name = "wordpress.example.com"
 # Optional: defaults to us-east-1.
 # aws_region = "us-east-1"
 
-# Optional: defaults to us-east-1a and us-east-1b.
+# Optional: defaults to two available zones in aws_region.
 # availability_zones = ["us-east-1a", "us-east-1b"]
 
 # Optional AMI override.

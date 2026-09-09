@@ -14,6 +14,7 @@ resource "aws_db_instance" "app" {
   username                    = var.db_user
   manage_master_user_password = true
   allocated_storage           = 20
+  storage_encrypted           = true
   db_subnet_group_name        = aws_db_subnet_group.app.name
   vpc_security_group_ids      = [aws_security_group.db.id]
   publicly_accessible         = false

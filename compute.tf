@@ -2,6 +2,8 @@
 
 resource "aws_launch_template" "app" {
 
+  name_prefix = "${var.name_prefix}-app-"
+
   image_id = var.ami_id
 
   instance_type = var.instance_type
@@ -29,6 +31,7 @@ resource "aws_launch_template" "app" {
 
 # Auto Scaling
 resource "aws_autoscaling_group" "app" {
+  name_prefix      = "${var.name_prefix}-app-"
   min_size         = var.min_size
   max_size         = var.max_size
   desired_capacity = var.desired_capacity
@@ -52,7 +55,7 @@ resource "aws_autoscaling_group" "app" {
 }
 
 resource "aws_autoscaling_policy" "app_cpu_target" {
-  name                   = "wordpress-average-cpu"
+  name                   = "${var.name_prefix}-average-cpu"
   autoscaling_group_name = aws_autoscaling_group.app.name
   policy_type            = "TargetTrackingScaling"
 

@@ -1,5 +1,5 @@
 resource "aws_db_subnet_group" "app" {
-  name = "wordpress-db"
+  name = "${var.name_prefix}-db"
   subnet_ids = [
     aws_subnet.db_a.id,
     aws_subnet.db_b.id
@@ -7,6 +7,7 @@ resource "aws_db_subnet_group" "app" {
 }
 
 resource "aws_db_instance" "app" {
+  identifier                  = "${var.name_prefix}-db"
   engine                      = "mysql"
   instance_class              = "db.t3.micro"
   db_name                     = var.db_name

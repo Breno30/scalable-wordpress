@@ -5,6 +5,17 @@ variable "aws_region" {
   default     = "us-east-1"
 }
 
+variable "name_prefix" {
+  type        = string
+  description = "Prefix used for names of resources created by this stack"
+  default     = "wordpress"
+
+  validation {
+    condition     = can(regex("^[a-z0-9][a-z0-9-]{0,18}[a-z0-9]$", var.name_prefix))
+    error_message = "name_prefix must be 2 to 20 characters and contain only lowercase letters, numbers, and hyphens, with no leading or trailing hyphen."
+  }
+}
+
 variable "availability_zones" {
   type        = list(string)
   description = "Two Availability Zones used by the stack"

@@ -1,5 +1,5 @@
 resource "aws_efs_file_system" "app" {
-  creation_token = "my-product"
+  creation_token = "${var.name_prefix}-uploads"
 
 }
 

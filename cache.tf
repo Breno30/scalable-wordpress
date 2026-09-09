@@ -1,6 +1,6 @@
 resource "aws_elasticache_serverless_cache" "app" {
   engine = "valkey"
-  name   = "wordpress-sessions"
+  name   = "${var.name_prefix}-sessions"
 
   security_group_ids = [
     aws_security_group.redis.id

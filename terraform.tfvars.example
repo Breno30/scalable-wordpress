@@ -1,3 +1,4 @@
+name_prefix = "wordpress"
 domain_name = "wordpress.example.com"
 
 # Optional: defaults to us-east-1.

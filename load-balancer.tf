@@ -3,6 +3,7 @@
 
 # Load balancer target configuration
 resource "aws_lb_target_group" "app" {
+  name     = "${var.name_prefix}-app"
   port     = 80
   protocol = "HTTP"
   vpc_id   = aws_vpc.app.id
@@ -20,6 +21,7 @@ resource "aws_lb_target_group" "app" {
 
 # Application load balancer
 resource "aws_lb" "app" {
+  name               = "${var.name_prefix}-alb"
   internal           = false
   load_balancer_type = "application"
   subnets            = values(local.public_subnet_ids)

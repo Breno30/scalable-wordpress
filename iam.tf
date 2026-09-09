@@ -1,5 +1,5 @@
 resource "aws_iam_role" "wordpress" {
-  name = "wordpress-ec2"
+  name = "${var.name_prefix}-ec2"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -18,7 +18,7 @@ resource "aws_iam_role" "wordpress" {
 }
 
 resource "aws_iam_role_policy" "read_database_secret" {
-  name = "read-wordpress-database-secret"
+  name = "${var.name_prefix}-read-database-secret"
   role = aws_iam_role.wordpress.id
 
   policy = jsonencode({
@@ -46,6 +46,6 @@ resource "aws_iam_role_policy_attachment" "cloudwatch_agent_server" {
 }
 
 resource "aws_iam_instance_profile" "wordpress" {
-  name = "wordpress-ec2"
+  name = "${var.name_prefix}-ec2"
   role = aws_iam_role.wordpress.name
 }

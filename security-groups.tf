@@ -1,6 +1,6 @@
 resource "aws_security_group" "efs" {
 
-  name   = "app-efs"
+  name   = "${var.name_prefix}-efs"
   vpc_id = aws_vpc.app.id
 
   ingress {
@@ -13,7 +13,7 @@ resource "aws_security_group" "efs" {
 
 
 resource "aws_security_group" "app" {
-  name        = "wordpress-app"
+  name        = "${var.name_prefix}-app"
   description = "Allow HTTP traffic only from the application load balancer"
   vpc_id      = aws_vpc.app.id
 
@@ -34,6 +34,7 @@ resource "aws_security_group" "app" {
 }
 
 resource "aws_security_group" "redis" {
+  name   = "${var.name_prefix}-cache"
   vpc_id = aws_vpc.app.id
 
   ingress {
@@ -52,7 +53,7 @@ resource "aws_security_group" "redis" {
 }
 
 resource "aws_security_group" "alb" {
-  name        = "wordpress-alb"
+  name        = "${var.name_prefix}-alb"
   description = "Allow public HTTP and HTTPS traffic to the application load balancer"
   vpc_id      = aws_vpc.app.id
 
@@ -81,7 +82,7 @@ resource "aws_security_group" "alb" {
 }
 
 resource "aws_security_group" "db" {
-  name        = "wordpress-db"
+  name        = "${var.name_prefix}-db"
   description = "Allow MySQL access from WordPress instances"
   vpc_id      = aws_vpc.app.id
 

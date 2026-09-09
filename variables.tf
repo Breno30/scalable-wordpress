@@ -29,8 +29,13 @@ variable "availability_zones" {
 
 variable "ami_id" {
   type        = string
-  description = "AMI used by the launch template"
-  default     = "ami-0bdc7d025135d7b49" // Amazon Linux 2023 us-east-1
+  description = "Optional AMI used by the launch template; defaults to the latest regional Amazon Linux 2023 x86_64 image"
+  default     = null
+
+  validation {
+    condition     = var.ami_id == null || can(regex("^ami-[0-9a-f]+$", var.ami_id))
+    error_message = "ami_id must be null or a valid AMI ID beginning with ami-."
+  }
 }
 
 variable "instance_type" {
@@ -41,16 +46,31 @@ variable "instance_type" {
 variable "min_size" {
   type    = number
   default = 1
+
+  validation {
+    condition     = var.min_size >= 0 && floor(var.min_size) == var.min_size
+    error_message = "min_size must be a non-negative integer."
+  }
 }
 
 variable "max_size" {
   type    = number
   default = 2
+
+  validation {
+    condition     = var.max_size >= 0 && floor(var.max_size) == var.max_size
+    error_message = "max_size must be a non-negative integer."
+  }
 }
 
 variable "desired_capacity" {
   type    = number
   default = 1
+
+  validation {
+    condition     = var.desired_capacity >= 0 && floor(var.desired_capacity) == var.desired_capacity
+    error_message = "desired_capacity must be a non-negative integer."
+  }
 }
 
 variable "db_name" {

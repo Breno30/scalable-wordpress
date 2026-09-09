@@ -1,10 +1,19 @@
 
 
+data "aws_ssm_parameter" "amazon_linux_2023" {
+  count = var.ami_id == null ? 1 : 0
+  name  = "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64"
+}
+
+locals {
+  effective_ami_id = var.ami_id != null ? var.ami_id : data.aws_ssm_parameter.amazon_linux_2023[0].value
+}
+
 resource "aws_launch_template" "app" {
 
   name_prefix = "${var.name_prefix}-app-"
 
-  image_id = var.ami_id
+  image_id = local.effective_ami_id
 
   instance_type = var.instance_type
 
@@ -52,6 +61,12 @@ resource "aws_autoscaling_group" "app" {
 
   depends_on = [aws_efs_mount_target.app]
 
+  lifecycle {
+    precondition {
+      condition     = var.min_size <= var.desired_capacity && var.desired_capacity <= var.max_size
+      error_message = "Auto Scaling capacity must satisfy min_size <= desired_capacity <= max_size."
+    }
+  }
 }
 
 resource "aws_autoscaling_policy" "app_cpu_target" {

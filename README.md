@@ -12,7 +12,7 @@ _Select the diagram to view the Mermaid source._
 
 | Engineering concern | Implementation |
 | --- | --- |
-| High availability | Resources span two Availability Zones, with an ALB distributing requests across an Auto Scaling group. |
+| Availability and scaling | Network resources span two Availability Zones, and the ALB can distribute requests across multiple Auto Scaling instances when capacity is increased. |
 | Network security | Only the ALB is public. EC2 runs without public IP addresses, and RDS is not publicly accessible. |
 | Horizontal scaling | Target-tracking scaling adjusts EC2 capacity around 60% average CPU utilization. |
 | Shared application state | EFS stores WordPress uploads so every EC2 instance sees the same media files. |
@@ -24,9 +24,9 @@ _Select the diagram to view the Mermaid source._
 
 ## Architecture
 
-The VPC uses three network tiers across two Availability Zones. The defaults
-are `us-east-1a` and `us-east-1b`; callers can provide `availability_zones`
-when they need different placement:
+The VPC uses three network tiers across two Availability Zones. By default,
+Terraform selects two available zones in `aws_region`; callers can provide
+`availability_zones` when they need specific placement:
 
 1. **Public subnets** contain the internet-facing Application Load Balancer and one NAT gateway per Availability Zone.
 2. **Private application subnets** contain WordPress EC2 instances, EFS mount targets, and Valkey. Instances can download updates through NAT but cannot receive connections directly from the internet.
@@ -55,7 +55,9 @@ Before deploying, you need:
 - AWS credentials with permission to create the resources in this repository
 - A DNS name you control if you want HTTPS with a custom domain
 
-The default AMI is `ami-0bdc7d025135d7b49`. Set `ami_id` to use another image.
+By default, Terraform obtains the latest regional Amazon Linux 2023 x86_64 AMI
+from the AWS Systems Manager public parameter. Set `ami_id` to pin or use a
+different compatible image.
 
 > **Cost warning:** this stack creates billable AWS resources, including two NAT gateways, an Application Load Balancer, RDS, EFS, EC2, and ElastiCache. Review the [estimated cost](#estimated-cost) before applying, and run `terraform destroy` when finished.
 
@@ -191,6 +193,7 @@ NAT gateway.
 
 ## Design decisions and trade-offs
 
+- **Scalable defaults, not full high availability** keep demonstration costs lower. The default runs one EC2 instance and a Single-AZ RDS database; increase Auto Scaling capacity and enable RDS Multi-AZ for a production availability target.
 - **One NAT gateway per Availability Zone** avoids a cross-zone dependency for private workloads, but it is the largest fixed cost. A development variant could use one NAT gateway at the cost of lower resilience.
 - **EFS for uploads** makes EC2 instances replaceable and supports horizontal scaling, though it costs more and has different latency characteristics than local disk.
 - **AWS-managed database credentials** keep the password out of Terraform configuration and state inputs. The instance role can read only that specific secret.

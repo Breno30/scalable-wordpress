@@ -142,7 +142,7 @@ cat <<'EOF' > /opt/aws/amazon-cloudwatch-agent/bin/config.json
 {
   "agent": {
     "metrics_collection_interval": 60,
-    "run_as_user": "cwagent"
+    "run_as_user": "root"
   },
   "metrics": {
     "aggregation_dimensions": [
@@ -182,13 +182,13 @@ cat <<'EOF' > /opt/aws/amazon-cloudwatch-agent/bin/config.json
             "file_path": "/var/log/nginx/access.log",
             "log_group_name": "/wordpress/nginx/access",
             "log_stream_name": "{instance_id}",
-            "retention_in_days": 7
+            "retention_in_days": 30
           },
           {
             "file_path": "/var/log/nginx/error.log",
             "log_group_name": "/wordpress/nginx/error",
             "log_stream_name": "{instance_id}",
-            "retention_in_days": 7
+            "retention_in_days": 30
           }
         ]
       }

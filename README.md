@@ -67,11 +67,15 @@ different compatible image.
 
 #### Step 1: Initialize Terraform
 
+Create a local backend config from the example, then set the bucket and region
+for your Terraform state:
+
 ```bash
-terraform init \
-  -backend-config="bucket=<your-terraform-state-bucket>" \
-  -backend-config="key=scalable-wordpress/production.tfstate" \
-  -backend-config="region=<state-bucket-region>"
+cp backend.s3.tfbackend.example backend.s3.tfbackend
+```
+
+```bash
+terraform init -backend-config=backend.s3.tfbackend
 ```
 
 #### Step 2: Review the execution plan
@@ -101,11 +105,15 @@ Open the printed load-balancer URL to complete the WordPress setup.
 
 #### Step 1: Initialize Terraform
 
+Create a local backend config from the example, then set the bucket and region
+for your Terraform state:
+
 ```bash
-terraform init \
-  -backend-config="bucket=<your-terraform-state-bucket>" \
-  -backend-config="key=scalable-wordpress/production.tfstate" \
-  -backend-config="region=<state-bucket-region>"
+cp backend.s3.tfbackend.example backend.s3.tfbackend
+```
+
+```bash
+terraform init -backend-config=backend.s3.tfbackend
 ```
 
 #### Step 2: Configure the domain

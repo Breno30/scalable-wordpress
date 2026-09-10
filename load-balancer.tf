@@ -21,11 +21,13 @@ resource "aws_lb_target_group" "app" {
 
 # Application load balancer
 resource "aws_lb" "app" {
-  name               = "${var.name_prefix}-alb"
-  internal           = false
-  load_balancer_type = "application"
-  subnets            = values(local.public_subnet_ids)
-  security_groups    = [aws_security_group.alb.id]
+  name                       = "${var.name_prefix}-alb"
+  internal                   = false
+  load_balancer_type         = "application"
+  subnets                    = values(local.public_subnet_ids)
+  security_groups            = [aws_security_group.alb.id]
+  enable_deletion_protection = var.deletion_protection
+  drop_invalid_header_fields = true
 
   depends_on = [
     aws_route_table_association.app_a,

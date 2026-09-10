@@ -45,7 +45,7 @@ variable "instance_type" {
 
 variable "min_size" {
   type    = number
-  default = 1
+  default = 2
 
   validation {
     condition     = var.min_size >= 0 && floor(var.min_size) == var.min_size
@@ -65,7 +65,7 @@ variable "max_size" {
 
 variable "desired_capacity" {
   type    = number
-  default = 1
+  default = 2
 
   validation {
     condition     = var.desired_capacity >= 0 && floor(var.desired_capacity) == var.desired_capacity

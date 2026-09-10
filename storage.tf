@@ -4,6 +4,11 @@ resource "aws_efs_file_system" "app" {
 
 }
 
+resource "aws_efs_backup_policy" "app" {
+  file_system_id = aws_efs_file_system.app.id
+  backup_policy { status = "ENABLED" }
+}
+
 resource "aws_efs_mount_target" "app" {
   for_each        = local.private_app_subnet_ids
   file_system_id  = aws_efs_file_system.app.id

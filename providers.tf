@@ -7,6 +7,11 @@ terraform {
       version = "~> 6.0"
     }
   }
+
+  backend "s3" {
+    encrypt      = true
+    use_lockfile = true
+  }
 }
 
 provider "aws" {

@@ -90,8 +90,6 @@ secret_json="$(
 db_user="$(jq -er '.username' <<<"$secret_json")"
 db_password="$(jq -er '.password' <<<"$secret_json")"
 
-unset secret_json
-
 wp --allow-root core download --path="$WORDPRESS_DIR"
 wp --allow-root config create \
   --path="$WORDPRESS_DIR" \
@@ -100,8 +98,14 @@ wp --allow-root config create \
   --dbpass="$db_password" \
   --dbhost='${db_host}' \
   --dbcharset='utf8mb4' \
-  --dbcollate='utf8mb4_unicode_ci' \
-  --skip-salts
+  --dbcollate='utf8mb4_unicode_ci'
+
+# Derive identical salts from the managed database secret on every instance.
+for salt_name in AUTH_KEY SECURE_AUTH_KEY LOGGED_IN_KEY NONCE_KEY AUTH_SALT SECURE_AUTH_SALT LOGGED_IN_SALT NONCE_SALT; do
+  salt_value="$(printf '%s' "$db_password:$salt_name" | sha512sum | cut -d' ' -f1)"
+  wp --allow-root config set "$salt_name" "$salt_value" --path="$WORDPRESS_DIR"
+done
+unset secret_json db_password salt_value
 
 # The ALB terminates HTTPS and forwards HTTP to Nginx. 
 sed -i '/\/\* That.s all, stop editing!/i if (isset($_SERVER["HTTP_X_FORWARDED_PROTO"]) && $_SERVER["HTTP_X_FORWARDED_PROTO"] === "https") { $_SERVER["HTTPS"] = "on"; }\n' "$WORDPRESS_DIR/wp-config.php"

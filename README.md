@@ -53,6 +53,7 @@ Before deploying, you need:
 
 - Terraform installed locally
 - AWS credentials with permission to create the resources in this repository
+- A versioned, private S3 bucket for Terraform state
 - A DNS name you control if you want HTTPS with a custom domain
 
 By default, Terraform obtains the latest regional Amazon Linux 2023 x86_64 AMI
@@ -67,7 +68,10 @@ different compatible image.
 #### Step 1: Initialize Terraform
 
 ```bash
-terraform init
+terraform init \
+  -backend-config="bucket=<your-terraform-state-bucket>" \
+  -backend-config="key=scalable-wordpress/production.tfstate" \
+  -backend-config="region=<state-bucket-region>"
 ```
 
 #### Step 2: Review the execution plan
@@ -98,7 +102,10 @@ Open the printed load-balancer URL to complete the WordPress setup.
 #### Step 1: Initialize Terraform
 
 ```bash
-terraform init
+terraform init \
+  -backend-config="bucket=<your-terraform-state-bucket>" \
+  -backend-config="key=scalable-wordpress/production.tfstate" \
+  -backend-config="region=<state-bucket-region>"
 ```
 
 #### Step 2: Configure the domain
@@ -193,7 +200,7 @@ NAT gateway.
 
 ## Design decisions and trade-offs
 
-- **Scalable defaults, not full high availability** keep demonstration costs lower. The default runs one EC2 instance and a Single-AZ RDS database; increase Auto Scaling capacity and enable RDS Multi-AZ for a production availability target.
+- **Highly available defaults** run two EC2 instances across two Availability Zones and a Multi-AZ RDS database. Deletion protection, automated database backups, EFS backups, encrypted storage, and rolling instance refreshes are enabled by default.
 - **One NAT gateway per Availability Zone** avoids a cross-zone dependency for private workloads, but it is the largest fixed cost. A development variant could use one NAT gateway at the cost of lower resilience.
 - **EFS for uploads** makes EC2 instances replaceable and supports horizontal scaling, though it costs more and has different latency characteristics than local disk.
 - **AWS-managed database credentials** keep the password out of Terraform configuration and state inputs. The instance role can read only that specific secret.
@@ -202,20 +209,18 @@ NAT gateway.
 
 ## Estimated cost
 
-Expect roughly **$130–$150 per month** for a small, continuously running deployment in `us-east-1`, before meaningful traffic or free-tier credits. This assumes one `t3.micro` EC2 instance, a Single-AZ `db.t3.micro` RDS database with 20 GB of storage, light EFS and Valkey usage, and 730 hours per month.
+This production configuration includes two NAT gateways, two EC2 instances,
+a Multi-AZ RDS database, an ALB, ElastiCache Serverless, EFS backups, and
+CloudWatch. Pricing varies by Region and usage; model the configuration in the
+[AWS Pricing Calculator](https://calculator.aws/) before deployment and set a
+budget in the target AWS account.
 
-| Service | Approximate monthly cost |
-| --- | ---: |
-| Two NAT gateways | $66 |
-| Application Load Balancer and light LCU usage | $17–$23 |
-| EC2 `t3.micro` | $8 |
-| RDS `db.t3.micro` and 20 GB storage | $15–$22 |
-| ElastiCache Serverless for Valkey | From $6 |
-| Public IPv4 addresses | About $15 |
-| EFS, Secrets Manager, and small variable charges | $1–$5 |
-| **Estimated total** | **$130–$150/month** |
+## Operations
 
-Data transfer, NAT processing, ALB capacity, cache requests, EFS usage, backups, and CPU credits can increase the total. Prices change, so confirm the estimate with the [AWS Pricing Calculator](https://calculator.aws/) before deploying.
+- CloudWatch retains Nginx logs for 30 days.
+- RDS retains automated backups for 14 days and can autoscale storage from 20 to 100 GiB. EFS automatic backups are enabled.
+- Terraform state uses an encrypted S3 backend with native lock files. Create and version the state bucket separately; do not store state in this repository.
+- Test restoration of both RDS and EFS backups, scaling behavior, WordPress upgrades, and an Availability Zone failure before accepting production traffic.
 
 ## Clean up
 
@@ -224,3 +229,7 @@ Avoid ongoing AWS charges when you are finished:
 ```bash
 terraform destroy
 ```
+
+Deletion protection is enabled by default. To intentionally retire the stack,
+first set `deletion_protection = false`, apply that change, and then run
+`terraform destroy`. RDS creates a final snapshot during destruction.

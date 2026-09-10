@@ -1,0 +1,3 @@
+bucket = "your-terraform-state-bucket"
+key    = "scalable-wordpress/production.tfstate"
+region = "us-east-1"

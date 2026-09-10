@@ -83,6 +83,12 @@ variable "db_user" {
   default = "wordpress"
 }
 
+variable "deletion_protection" {
+  type        = bool
+  description = "Protect stateful and edge resources from accidental deletion"
+  default     = true
+}
+
 variable "domain_name" {
   type        = string
   description = "The target domain name (e.g., example.com)"

@@ -48,6 +48,13 @@ server {
 
     root /usr/share/nginx/html;
     index index.php index.html;
+    client_max_body_size 64m;
+
+    location = /healthz {
+        access_log off;
+        default_type text/plain;
+        return 200 "healthy\n";
+    }
 
     location / {
         try_files $uri $uri/ /index.php?$args;

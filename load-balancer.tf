@@ -9,7 +9,7 @@ resource "aws_lb_target_group" "app" {
   vpc_id   = aws_vpc.app.id
 
   health_check {
-    path                = "/"
+    path                = "/healthz"
     protocol            = "HTTP"
     matcher             = "200-399"
     interval            = 30

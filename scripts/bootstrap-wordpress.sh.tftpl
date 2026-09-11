@@ -121,7 +121,15 @@ wp --allow-root config set WP_REDIS_TIMEOUT '1' --raw --path="$WORDPRESS_DIR"
 wp --allow-root config set WP_REDIS_READ_TIMEOUT '1' --raw --path="$WORDPRESS_DIR"
 wp --allow-root config set DISALLOW_FILE_EDIT true --raw --path="$WORDPRESS_DIR"
 
-wp --allow-root plugin install redis-cache --version=2.8.0 --force --path="$WORDPRESS_DIR" --activate
+# Stage the plugin files before the WordPress database is installed. WP-CLI's
+# plugin install command bootstraps WordPress and fails while the site is still
+# uninstalled.
+redis_zip='/tmp/redis-cache-2.8.0.zip'
+curl --fail --location --retry 5 \
+  https://downloads.wordpress.org/plugin/redis-cache.2.8.0.zip \
+  --output "$redis_zip"
+unzip -q -o "$redis_zip" -d "$WORDPRESS_DIR/wp-content/plugins"
+rm -f "$redis_zip"
 
 cp "$WORDPRESS_DIR/wp-content/plugins/redis-cache/includes/object-cache.php" "$WORDPRESS_DIR/wp-content/object-cache.php"
 

@@ -4,6 +4,8 @@
 # Terraform state files
 *.tfstate
 *.tfstate.*
+*.tfbackend
+!*.tfbackend.example
 
 # Terraform crash and diagnostic logs
 crash.log
@@ -13,19 +15,15 @@ crash.*.log
 *.tfvars
 *.tfvars.json
 
+# Saved Terraform plans
+*.tfplan
+
 # Local override files
 override.tf
 override.tf.json
 *_override.tf
 *_override.tf.json
 
-# Saved Terraform plans
-*.tfplan
-
 # Terraform CLI configuration
 .terraformrc
 terraform.rc
-
-.terraform.lock.hcl
-
-terraform.tfvars

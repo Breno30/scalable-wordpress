@@ -217,9 +217,28 @@ NAT gateway.
 
 ## Estimated cost
 
-This production configuration includes two NAT gateways, two EC2 instances,
-a Multi-AZ RDS database, an ALB, ElastiCache Serverless, EFS backups, and
-CloudWatch. Pricing varies by Region and usage; model the configuration in the
+This production configuration is not free-tier sized. With the default
+`us-east-1` settings and 730 hours per month, the current published AWS rates
+put the baseline around **$158/month before traffic, EFS data, CloudWatch log
+volume, EC2 root EBS storage, internet data transfer, snapshots, taxes, and
+support**.
+
+| Resource | Default configuration | Current `us-east-1` rate used | Approximate monthly cost |
+| --- | --- | --- | --- |
+| NAT gateways | 2 gateways | $0.045/hour each, plus $0.045/GB processed | $65.70 before data processing |
+| RDS MySQL | `db.t3.small`, Multi-AZ | $0.068/hour | $49.64 |
+| RDS storage | 20 GiB gp3, Multi-AZ | $0.23/GB-month | $4.60, or $23.00 at the 100 GiB autoscaling maximum |
+| Application Load Balancer | 1 ALB | $0.0225/hour, plus $0.008/LCU-hour | $16.43 before LCU usage |
+| EC2 | 2 `t3.micro` Linux instances | $0.0104/hour each | $15.18 before root EBS and surplus CPU credits |
+| ElastiCache Serverless | Valkey | $0.084/GB-hour storage, 100 MB minimum, plus $0.0023/million ECPUs | $6.13 storage floor before requests |
+| Secrets Manager | 1 generated RDS secret | $0.40/secret-month, plus API calls | $0.40 before API calls |
+| EFS | Standard regional file system | $0.30/GB-month, plus AWS Backup warm storage at $0.05/GB-month | Usage-based |
+| CloudWatch Logs | Nginx logs, 30-day retention | $0.50/GB ingested and $0.03/GB-month stored | Usage-based |
+
+These figures were checked against the
+[AWS public price lists](https://docs.aws.amazon.com/awsaccountbilling/latest/aboutv2/using-the-aws-price-list-bulk-api-fetching-price-list-files-manually.html)
+published between 2026-08-31 and 2026-09-10. Pricing varies by Region and
+usage; model the configuration in the
 [AWS Pricing Calculator](https://calculator.aws/) before deployment and set a
 budget in the target AWS account.
 

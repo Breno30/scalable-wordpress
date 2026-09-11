@@ -33,4 +33,10 @@ Internet -> public ALB -> private WordPress -> isolated/private data services
 
 ## Cost and availability trade-off
 
-The configuration creates one NAT gateway per Availability Zone. This avoids making one zone depend on the other for outbound access, but AWS charges for each NAT gateway and for processed data. A learning or development environment could use one NAT gateway to reduce cost, accepting lower availability and cross-zone routing. VPC endpoints can later reduce some NAT traffic.
+The configuration creates one NAT gateway per Availability Zone. In `us-east-1`,
+that is currently $0.045 per gateway-hour plus $0.045 per GB processed, so the
+two-gateway default is about $65.70 per 730-hour month before data processing.
+This avoids making one zone depend on the other for outbound access. A learning
+or development environment could use one NAT gateway to reduce the fixed cost by
+about half, accepting lower availability and cross-zone routing. VPC endpoints
+can later reduce some NAT traffic.
